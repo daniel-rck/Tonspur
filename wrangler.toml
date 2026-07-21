@@ -1,0 +1,11 @@
+name = "tonspur"
+main = "worker/index.ts"
+compatibility_date = "2026-07-21"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+# For the future YouTube search proxy, store the API key as a secret:
+#   wrangler secret put YT_API_KEY
