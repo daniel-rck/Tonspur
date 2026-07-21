@@ -54,15 +54,38 @@ git push -u origin main
 
 ## Videos hinzufügen
 
-Beim ersten Start ist noch kein Film spielbar. Öffne **„Filme verwalten"**,
-klick pro Film auf **🔎** (sucht gezielt nach dem Thema auf YouTube), kopier die
-URL der **Titelmelodie / des Hauptthemas** und füg sie ein. Optional eine
-Start-Sekunde setzen. Ab dem ersten Video kannst du starten. Deine Links
-bleiben lokal gespeichert.
+Die App wird mit vorab ermittelten YouTube-Links für alle 129 Filme ausgeliefert
+(siehe [Auto-Links](#auto-links) unten) — frisch installiert ist sie also sofort
+spielbar. Einen einzelnen Link ändern? Öffne **„Filme verwalten"**, klick pro
+Film auf **🔎** (sucht gezielt nach dem Thema auf YouTube), kopier die URL der
+**Titelmelodie / des Hauptthemas** und füg sie ein. Optional eine Start-Sekunde
+setzen. Deine Änderungen bleiben lokal gespeichert und überschreiben die
+Standard-Links.
 
 Wiedergabe läuft ausschließlich über die offizielle **YouTube IFrame Player
 API** (kein Audio-Extrahieren). Der Player wird versteckt eingebunden — für ein
 privates Spiel eine bewusst in Kauf genommene ToS-Grauzone.
+
+## Auto-Links
+
+Die Standard-Links werden per Skript aus dem kuratierten `searchHint` jedes Films
+ermittelt (via [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), lokal installiert):
+
+```bash
+bun run fetch-links                  # alle Filme
+bun run fetch-links --only-missing   # nur Filme ohne Link
+bun run fetch-links --filter "Pate"  # nur passende Titel
+```
+
+Das Skript ([`scripts/fetch-links.ts`](scripts/fetch-links.ts)) holt je Film die
+Top-Treffer, wählt per Heuristik den besten (offizielle/Label-Kanäle und
+Theme-Keywords bevorzugt, Cover/Reactions/Loops abgewertet, sinnvolle Dauer),
+verhindert doppelte Videos und schreibt das Ergebnis nach
+`src/features/game/movie-links.ts` (fließt in den Default-Pack). Ein Review-Report
+landet unter `scripts/links-report.md` — die YouTube-Top-Treffer sind nicht immer
+das echte Hauptthema, also lohnt ein Blick auf die als „unsicher" markierten
+Einträge. `yt-dlp` fehlt? `winget install yt-dlp.yt-dlp` (Windows),
+`scoop install yt-dlp` oder `pip install -U yt-dlp`.
 
 ## Filmliste
 

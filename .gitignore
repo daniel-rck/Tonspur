@@ -9,3 +9,5 @@ dev-dist
 !.env.example
 *.log
 coverage
+*.tsbuildinfo
+scripts/links-report.md

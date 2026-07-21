@@ -38,15 +38,6 @@ export async function setKV(key: string, value: unknown): Promise<void> {
   notifyMutation("kv");
 }
 
-/** Test helper: wipe all stores in the current DB. */
-export async function clearAll(): Promise<void> {
-  const db = await getDB();
-  const tx = db.transaction(Array.from(db.objectStoreNames), "readwrite");
-  await Promise.all(Array.from(db.objectStoreNames).map((name) => tx.objectStore(name).clear()));
-  await tx.done;
-  notifyMutation("*");
-}
-
 /** Notify subscribers of mutations. Channels are per-store. */
 export function notifyMutation(storeName: string): void {
   if (typeof BroadcastChannel === "undefined") return;
