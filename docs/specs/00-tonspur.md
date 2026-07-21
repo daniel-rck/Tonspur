@@ -19,7 +19,9 @@ richtige Antworten geben mehr Punkte; eine Serie (Streak) gibt Bonus.
   Schlüssel: `pack:v4` (Filmliste inkl. der YouTube-Links der Person) und
   `highscores:v1` (bester Score je Modus). Kein localStorage für App-Daten.
 - **Daten:** `src/features/game/movies.ts` — 129 Filme. Regel: ab 1995 ODER
-  IMDb ≥ 8.4, plus `exception: true`-Einträge für ikonische ältere Themes.
+  IMDb ≥ 8.4, plus `exception: true`-Einträge für ikonische ältere Themes. Die
+  Default-YouTube-Links liegen in `movie-links.ts` (generiert von
+  `scripts/fetch-links.ts` via yt-dlp) und werden in `buildDefaultPack` gemerged.
 - **Scoring:** 30 s Runde, linearer Abfall von 1000 → 0 Punkten, Streak-Bonus
   bis +50 %.
 
@@ -38,13 +40,17 @@ Laut `07-conventions.md` brauchen Abweichungen eine dokumentierte Entscheidung.
    typischerweise eigene Object-Stores je Entität an; hier genügt ein `kv`-Store
    mit `getKV`/`setKV`, da nur zwei Blobs (Pack, Highscores) persistiert werden.
    Invariante „App-Daten in IndexedDB" bleibt erfüllt.
-3. **Kein Test-Setup ausgereizt.** Vitest-Deps sind vorhanden (web-base-Pins),
-   aber es liegen noch keine Tests bei. Kandidaten: `normTitle`, `lev`/`isMatch`,
-   `extractId`, Scoring.
+3. **Reine Logik aus `GamePage` extrahiert.** Text-/Scoring-/Pack-Utilities
+   liegen in `src/features/game/lib/` (`text.ts`, `scoring.ts`, `pack.ts`) und
+   sind per Vitest getestet (`lib/text.test.ts`, `lib/scoring.test.ts`:
+   `normTitle`, `lev`/`isMatch`, `extractId`, `pointsNow`). Die Screens sind je
+   eine Datei unter `components/`.
 
 ## Offen / später
 
 - Live-Suche über `/api/search` (YouTube Data API v3, `YT_API_KEY` als
-  Wrangler-Secret, Caching). Aktuell `501`.
-- PWA-Icons (`public/icon-192.png`, `icon-512.png`, `icon-maskable.png`) fehlen
-  noch; nur `favicon.svg` liegt bei.
+  Wrangler-Secret, Caching). Aktuell `501`. Alternativ/ergänzend füllt
+  `bun run fetch-links` die Default-Links offline per yt-dlp.
+- PWA-Icons (`public/icon-192.png`, `icon-512.png`, `icon-maskable.png`) werden
+  aus `favicon.svg` generiert: `bun run generate-pwa-assets`
+  (`@vite-pwa/assets-generator`, Config in `pwa-assets.config.ts`).

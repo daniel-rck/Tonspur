@@ -8,11 +8,11 @@
     <meta name="description" content="Errate den Film an seiner Musik" />
     <title>Tonspur — Errate den Film an seiner Musik</title>
     <script>
-      (function () {
+      (() => {
         try {
-          var t = localStorage.getItem("theme");
+          const t = localStorage.getItem("theme");
           if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
-        } catch (e) {}
+        } catch {}
       })();
     </script>
   </head>

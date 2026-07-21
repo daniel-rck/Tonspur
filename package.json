@@ -4,12 +4,26 @@
   "version": "0.0.0",
   "type": "module",
   "description": "Errate den Film an seiner Musik — Titelmelodie-Ratespiel (PWA)",
-  "keywords": ["pwa", "privacy", "offline", "react", "vite", "typescript", "game", "music"],
+  "keywords": [
+    "pwa",
+    "privacy",
+    "offline",
+    "react",
+    "vite",
+    "typescript",
+    "game",
+    "music"
+  ],
   "author": "daniel-rck",
   "license": "MIT",
   "homepage": "https://tonspur.daniel-rck.workers.dev",
-  "repository": { "type": "git", "url": "https://github.com/daniel-rck/tonspur.git" },
-  "bugs": { "url": "https://github.com/daniel-rck/tonspur/issues" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daniel-rck/tonspur.git"
+  },
+  "bugs": {
+    "url": "https://github.com/daniel-rck/tonspur/issues"
+  },
   "packageManager": "bun@1.3.11",
   "scripts": {
     "dev": "vite",
@@ -20,6 +34,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "fetch-links": "bun run scripts/fetch-links.ts",
+    "generate-pwa-assets": "pwa-assets-generator",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy"
   },
@@ -27,30 +43,32 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",
-    "idb": "^8.0.3",
-    "lucide-react": "^1.16.0"
+    "idb": "^8.0.3"
   },
   "devDependencies": {
-    "typescript": "~6.0.2",
-    "vite": "^8",
-    "@vitejs/plugin-react": "^6",
-    "vite-plugin-pwa": "^1.3",
-    "workbox-precaching": "^7.4.0",
-    "workbox-window": "^7.4.0",
-    "tailwindcss": "^4.2.4",
-    "@tailwindcss/vite": "^4.2.4",
     "@biomejs/biome": "^2.4.15",
-    "vitest": "^4.1.5",
-    "@vitest/ui": "^4.1.5",
-    "jsdom": "^29.1.0",
+    "@cloudflare/workers-types": "^4.20260504.1",
+    "@tailwindcss/vite": "^4.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "wrangler": "^4.87.0",
-    "@cloudflare/workers-types": "^4.20260504.1",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/node": "^25.6.0"
+    "@vite-pwa/assets-generator": "^1.0.2",
+    "@vitejs/plugin-react": "^6",
+    "@vitest/ui": "^4.1.5",
+    "jsdom": "^29.1.0",
+    "tailwindcss": "^4.2.4",
+    "typescript": "~6.0.2",
+    "vite": "^8",
+    "vite-plugin-pwa": "^1.3",
+    "vitest": "^4.1.5",
+    "workbox-precaching": "^7.4.0",
+    "workbox-window": "^7.4.0",
+    "wrangler": "^4.87.0"
   },
-  "webBase": { "version": "0.1.0" }
+  "webBase": {
+    "version": "0.1.0"
+  }
 }

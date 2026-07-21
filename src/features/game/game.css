@@ -91,6 +91,7 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
 .eq{display:flex;align-items:flex-end;gap:4px;height:34px;margin-top:10px}
 .eq-bar{width:5px;border-radius:3px;background:linear-gradient(180deg,var(--teal),#1f6f6c);height:20%}
 .playing .eq-bar{animation:eq .9s ease-in-out infinite alternate}
+/* biome-ignore lint/complexity/noImportantStyles: muted/finished state must force the equalizer animation off, overriding .playing .eq-bar */
 .eq-bar.mut{background:var(--line2);animation:none!important;height:14%}
 
 .redacted{margin-top:2px;height:26px;width:min(320px,82%);border-radius:6px;
@@ -153,6 +154,7 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
 .fade{animation:fade .35s ease}
 
 @media (prefers-reduced-motion:reduce){
+  /* biome-ignore lint/complexity/noImportantStyles: reduced-motion must forcibly stop all decorative animation (accessibility) */
   .playing .eq-bar,.brand .dot,.redacted::after{animation:none!important}
   .fade{animation:none}
 }
