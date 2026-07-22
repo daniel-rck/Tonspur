@@ -29,6 +29,7 @@ export function GamePage() {
   const [results, setResults] = useState<RoundResult[]>([]);
   const deadlineRef = useRef(0);
   const [remainingMs, setRemainingMs] = useState(0);
+  const resultsRef = useRef<RoundResult[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -64,6 +65,10 @@ export function GamePage() {
   const hits = useMemo(() => results.filter((r) => r.correct).length, [results]);
 
   useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
+
+  useEffect(() => {
     if (!timeAttack || screen !== "play") return;
     let raf = 0;
     const tick = () => {
@@ -71,7 +76,7 @@ export function GamePage() {
       if (rem <= 0) {
         setRemainingMs(0);
         yt.stop();
-        saveHighscore(hsKey, results.filter((r) => r.correct).length);
+        saveHighscore(hsKey, resultsRef.current.filter((r) => r.correct).length);
         setScreen("summary");
         return;
       }
@@ -80,7 +85,7 @@ export function GamePage() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [timeAttack, screen, yt, saveHighscore, hsKey, results]);
+  }, [timeAttack, screen, yt, saveHighscore, hsKey]);
 
   const startGame = useCallback(() => {
     const pool = shuffle(playable.map((m) => m.id));
@@ -195,13 +200,15 @@ export function GamePage() {
             hits={hits}
             onDone={(gained, elapsed, correct) => {
               if (timeAttack) {
-                if (correct) deadlineRef.current += timeBonus(hits + 1) * 1000;
                 finishRound(currentMovie, gained, elapsed, correct);
                 advanceTimeAttack();
               } else {
                 finishRound(currentMovie, gained, elapsed, correct);
                 setScreen("result");
               }
+            }}
+            onHit={() => {
+              deadlineRef.current += timeBonus(hits + 1) * 1000;
             }}
             onQuit={() => {
               yt.stop();

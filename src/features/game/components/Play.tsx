@@ -20,6 +20,7 @@ interface PlayProps {
   remainingMs: number;
   hits: number;
   onDone: (gained: number, elapsed: number, correct: boolean) => void;
+  onHit?: () => void;
   onQuit: () => void;
 }
 
@@ -38,6 +39,7 @@ export function Play({
   remainingMs,
   hits,
   onDone,
+  onHit,
   onQuit,
 }: PlayProps) {
   const [elapsed, setElapsed] = useState(0);
@@ -48,6 +50,7 @@ export function Play({
   const [hintLetters, setHintLetters] = useState(1);
   const startRef = useRef(0);
   const raf = useRef(0);
+  const doneTimer = useRef(0);
 
   const options = useMemo<PackEntry[]>(() => {
     if (mode !== "choice") return [];
@@ -68,7 +71,8 @@ export function Play({
     const gained = correct && !timeAttack ? pointsNow(performance.now() - startRef.current) : 0;
     const bonus =
       correct && !timeAttack && streak >= 1 ? Math.round(gained * Math.min(streak, 5) * 0.1) : 0;
-    window.setTimeout(
+    if (correct && timeAttack) onHit?.();
+    doneTimer.current = window.setTimeout(
       () => onDone(gained + bonus, performance.now() - startRef.current, correct),
       correct ? 650 : 900,
     );
@@ -80,7 +84,12 @@ export function Play({
     if (muted) yt.mute();
     else yt.unmute();
     startRef.current = performance.now();
-    if (timeAttack) return;
+    if (timeAttack) {
+      return () => {
+        cancelAnimationFrame(raf.current);
+        window.clearTimeout(doneTimer.current);
+      };
+    }
     const tick = () => {
       const e = performance.now() - startRef.current;
       setElapsed(e);
@@ -91,7 +100,10 @@ export function Play({
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf.current);
+    return () => {
+      cancelAnimationFrame(raf.current);
+      window.clearTimeout(doneTimer.current);
+    };
   }, []);
 
   const submitFree = () => {
