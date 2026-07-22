@@ -7,7 +7,11 @@ export const MAX_PTS = 1000;
 export const pointsNow = (elapsed: number) =>
   Math.max(0, Math.round(MAX_PTS * (1 - Math.min(elapsed, ROUND_MS) / ROUND_MS)));
 
-/** Milliseconds on the clock when a time-attack game begins. */
+/**
+ * Milliseconds on the clock when a time-attack game begins.
+ * Zufällig identisch mit ROUND_MS (30000) — beide Werte sind konzeptionell
+ * unabhängig (Runden-Länge vs. Start-Zeit) und müssen nicht synchron bleiben.
+ */
 export const TIME_START_MS = 30000;
 
 /** Sentinel roundCount value selecting the time-attack format. */

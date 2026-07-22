@@ -125,7 +125,19 @@ export function GamePage() {
   );
 
   const advanceTimeAttack = useCallback(() => {
-    setOrder((o) => (idx + 1 >= o.length ? [...o, ...shuffle(playable.map((m) => m.id))] : o));
+    setOrder((o) => {
+      if (idx + 1 < o.length) return o;
+      const batch = shuffle(playable.map((m) => m.id));
+      const last = o[o.length - 1];
+      if (batch.length > 1 && batch[0] === last) {
+        // Vermeide, dass derselbe Film unmittelbar hintereinander gezeigt wird.
+        const first = batch[0] as string;
+        const second = batch[1] as string;
+        batch[0] = second;
+        batch[1] = first;
+      }
+      return [...o, ...batch];
+    });
     setIdx((i) => i + 1);
   }, [idx, playable]);
 
@@ -184,7 +196,7 @@ export function GamePage() {
 
         {screen === "play" && currentMovie && (
           <Play
-            key={currentId}
+            key={`${idx}:${currentId}`}
             movie={currentMovie}
             pack={pack}
             mode={mode}
