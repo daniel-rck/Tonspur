@@ -7,6 +7,7 @@ import { Result } from "./components/Result.tsx";
 import { Summary } from "./components/Summary.tsx";
 import "./game.css";
 import { buildDefaultPack, HS_KEY, STORE_KEY, shuffle } from "./lib/pack.ts";
+import { isTimeAttack, TIME_START_MS, timeBonus } from "./lib/scoring.ts";
 import type { Mode, PackEntry, RoundResult, Screen } from "./types.ts";
 import { useYouTube } from "./useYouTube.ts";
 
@@ -26,6 +27,8 @@ export function GamePage() {
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [results, setResults] = useState<RoundResult[]>([]);
+  const deadlineRef = useRef(0);
+  const [remainingMs, setRemainingMs] = useState(0);
 
   useEffect(() => {
     void (async () => {
@@ -56,12 +59,39 @@ export function GamePage() {
   }, [muted, yt]);
 
   const playable = useMemo(() => pack.filter((m) => m.youtubeId), [pack]);
-  const hsKey = mode;
+  const timeAttack = isTimeAttack(roundCount);
+  const hsKey = timeAttack ? `${mode}-time` : mode;
+  const hits = useMemo(() => results.filter((r) => r.correct).length, [results]);
+
+  useEffect(() => {
+    if (!timeAttack || screen !== "play") return;
+    let raf = 0;
+    const tick = () => {
+      const rem = deadlineRef.current - performance.now();
+      if (rem <= 0) {
+        setRemainingMs(0);
+        yt.stop();
+        saveHighscore(hsKey, results.filter((r) => r.correct).length);
+        setScreen("summary");
+        return;
+      }
+      setRemainingMs(rem);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [timeAttack, screen, yt, saveHighscore, hsKey, results]);
 
   const startGame = useCallback(() => {
     const pool = shuffle(playable.map((m) => m.id));
-    const n = roundCount === 0 ? pool.length : Math.min(roundCount, pool.length);
-    setOrder(pool.slice(0, n));
+    if (isTimeAttack(roundCount)) {
+      setOrder(pool);
+      deadlineRef.current = performance.now() + TIME_START_MS;
+      setRemainingMs(TIME_START_MS);
+    } else {
+      const n = roundCount === 0 ? pool.length : Math.min(roundCount, pool.length);
+      setOrder(pool.slice(0, n));
+    }
     setIdx(0);
     setScore(0);
     setStreak(0);
@@ -88,6 +118,11 @@ export function GamePage() {
     },
     [],
   );
+
+  const advanceTimeAttack = useCallback(() => {
+    setOrder((o) => (idx + 1 >= o.length ? [...o, ...shuffle(playable.map((m) => m.id))] : o));
+    setIdx((i) => i + 1);
+  }, [idx, playable]);
 
   const nextRound = useCallback(() => {
     if (idx + 1 >= order.length) {
@@ -155,9 +190,18 @@ export function GamePage() {
             total={order.length}
             score={score}
             streak={streak}
+            timeAttack={timeAttack}
+            remainingMs={remainingMs}
+            hits={hits}
             onDone={(gained, elapsed, correct) => {
-              finishRound(currentMovie, gained, elapsed, correct);
-              setScreen("result");
+              if (timeAttack) {
+                if (correct) deadlineRef.current += timeBonus(hits + 1) * 1000;
+                finishRound(currentMovie, gained, elapsed, correct);
+                advanceTimeAttack();
+              } else {
+                finishRound(currentMovie, gained, elapsed, correct);
+                setScreen("result");
+              }
             }}
             onQuit={() => {
               yt.stop();
@@ -181,6 +225,7 @@ export function GamePage() {
             results={results}
             score={score}
             best={highscores[hsKey] ?? 0}
+            timeAttack={timeAttack}
             onAgain={startGame}
             onHome={() => setScreen("home")}
           />
