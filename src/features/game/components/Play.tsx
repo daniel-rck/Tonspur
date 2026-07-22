@@ -1,6 +1,6 @@
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { shuffle } from "../lib/pack.ts";
-import { MAX_PTS, pointsNow, ROUND_MS } from "../lib/scoring.ts";
+import { MAX_PTS, pointsNow, ROUND_MS, TIME_START_MS } from "../lib/scoring.ts";
 import { isMatch } from "../lib/text.ts";
 import type { Mode, PackEntry } from "../types.ts";
 import type { YT } from "../useYouTube.ts";
@@ -16,7 +16,11 @@ interface PlayProps {
   total: number;
   score: number;
   streak: number;
+  timeAttack: boolean;
+  remainingMs: number;
+  hits: number;
   onDone: (gained: number, elapsed: number, correct: boolean) => void;
+  onHit?: () => void;
   onQuit: () => void;
 }
 
@@ -31,7 +35,11 @@ export function Play({
   total,
   score,
   streak,
+  timeAttack,
+  remainingMs,
+  hits,
   onDone,
+  onHit,
   onQuit,
 }: PlayProps) {
   const [elapsed, setElapsed] = useState(0);
@@ -42,6 +50,7 @@ export function Play({
   const [hintLetters, setHintLetters] = useState(1);
   const startRef = useRef(0);
   const raf = useRef(0);
+  const doneTimer = useRef(0);
 
   const options = useMemo<PackEntry[]>(() => {
     if (mode !== "choice") return [];
@@ -59,9 +68,11 @@ export function Play({
     setPhase("done");
     setPicked(pick);
     yt.pause();
-    const gained = correct ? pointsNow(performance.now() - startRef.current) : 0;
-    const bonus = correct && streak >= 1 ? Math.round(gained * Math.min(streak, 5) * 0.1) : 0;
-    window.setTimeout(
+    const gained = correct && !timeAttack ? pointsNow(performance.now() - startRef.current) : 0;
+    const bonus =
+      correct && !timeAttack && streak >= 1 ? Math.round(gained * Math.min(streak, 5) * 0.1) : 0;
+    if (correct && timeAttack) onHit?.();
+    doneTimer.current = window.setTimeout(
       () => onDone(gained + bonus, performance.now() - startRef.current, correct),
       correct ? 650 : 900,
     );
@@ -73,6 +84,12 @@ export function Play({
     if (muted) yt.mute();
     else yt.unmute();
     startRef.current = performance.now();
+    if (timeAttack) {
+      return () => {
+        cancelAnimationFrame(raf.current);
+        window.clearTimeout(doneTimer.current);
+      };
+    }
     const tick = () => {
       const e = performance.now() - startRef.current;
       setElapsed(e);
@@ -83,7 +100,10 @@ export function Play({
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf.current);
+    return () => {
+      cancelAnimationFrame(raf.current);
+      window.clearTimeout(doneTimer.current);
+    };
   }, []);
 
   const submitFree = () => {
@@ -97,7 +117,7 @@ export function Play({
   };
 
   const pts = pointsNow(elapsed);
-  const frac = pts / MAX_PTS;
+  const frac = timeAttack ? Math.min(1, remainingMs / TIME_START_MS) : pts / MAX_PTS;
   const R = 100;
   const C = 2 * Math.PI * R;
   const mask = movie.title
@@ -113,12 +133,10 @@ export function Play({
   return (
     <div className="fade">
       <div className="topbar">
-        <span className="rounds-pill">
-          Runde {round}/{total}
-        </span>
+        <span className="rounds-pill">{timeAttack ? "⏱ Zeit" : `Runde ${round}/${total}`}</span>
         <div className="row" style={{ gap: 14 }}>
           {streak >= 2 && <span className="chip">🔥 {streak}</span>}
-          <span className="score-pill">{score.toLocaleString("de-DE")}</span>
+          {!timeAttack && <span className="score-pill">{score.toLocaleString("de-DE")}</span>}
           <button type="button" className="iconbtn" onClick={() => setMuted((m) => !m)} title="Ton">
             {muted ? "🔇" : "🔊"}
           </button>
@@ -153,9 +171,13 @@ export function Play({
               />
             </svg>
             <div className="ring-center">
-              <div className="pts">{phase === "done" ? "—" : pts}</div>
-              <div className="pts-lbl">Punkte jetzt</div>
-              <div className="clock">{Math.max(0, (ROUND_MS - elapsed) / 1000).toFixed(1)}s</div>
+              <div className="pts">{timeAttack ? hits : phase === "done" ? "—" : pts}</div>
+              <div className="pts-lbl">{timeAttack ? "Treffer" : "Punkte jetzt"}</div>
+              <div className="clock">
+                {timeAttack
+                  ? `${Math.max(0, remainingMs / 1000).toFixed(1)}s`
+                  : `${Math.max(0, (ROUND_MS - elapsed) / 1000).toFixed(1)}s`}
+              </div>
             </div>
           </div>
 
@@ -246,7 +268,7 @@ export function Play({
 
       {phase === "playing" && (
         <button type="button" className="btn btn-ghost mt-s" onClick={() => endRound(false, null)}>
-          Aufgeben →
+          {timeAttack ? "Überspringen →" : "Aufgeben →"}
         </button>
       )}
       <button
