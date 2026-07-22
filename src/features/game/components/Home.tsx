@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import { isTimeAttack, TIME_ATTACK } from "../lib/scoring.ts";
 import type { Mode } from "../types.ts";
 
 interface HomeProps {
@@ -49,17 +50,23 @@ export function Home({
           Runden
         </div>
         <div className="seg">
-          {[5, 10, 0].map((n) => (
+          {[5, 10, 0, TIME_ATTACK].map((n) => (
             <button
               type="button"
               key={n}
               data-on={roundCount === n ? 1 : 0}
               onClick={() => setRoundCount(n)}
             >
-              {n === 0 ? "Alle" : n}
+              {n === 0 ? "Alle" : n === TIME_ATTACK ? "⏱ Zeit" : n}
             </button>
           ))}
         </div>
+        {isTimeAttack(roundCount) && (
+          <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>
+            30 s Start — jeder Treffer bringt Zeit dazu, aber immer weniger. Gewertet werden die
+            Treffer.
+          </div>
+        )}
 
         <div className="row between mt" style={{ marginTop: 18 }}>
           <span className="muted" style={{ fontSize: 14 }}>
