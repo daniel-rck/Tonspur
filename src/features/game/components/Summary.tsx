@@ -4,18 +4,19 @@ interface SummaryProps {
   results: RoundResult[];
   score: number;
   best: number;
+  timeAttack: boolean;
   onAgain: () => void;
   onHome: () => void;
 }
 
-export function Summary({ results, score, best, onAgain, onHome }: SummaryProps) {
+export function Summary({ results, score, best, timeAttack, onAgain, onHome }: SummaryProps) {
   const hits = results.filter((r) => r.correct).length;
-  const isRecord = score >= best && score > 0;
+  const isRecord = timeAttack ? hits >= best && hits > 0 : score >= best && score > 0;
   return (
     <div className="fade">
       <div className="card center">
-        <div className="label">Endstand</div>
-        <div className="big">{score.toLocaleString("de-DE")}</div>
+        <div className="label">{timeAttack ? "Filme erkannt" : "Endstand"}</div>
+        <div className="big">{timeAttack ? hits : score.toLocaleString("de-DE")}</div>
         <div className="row" style={{ justifyContent: "center", gap: 10, marginTop: 14 }}>
           <span className="chip">
             🎯 {hits}/{results.length} richtig
