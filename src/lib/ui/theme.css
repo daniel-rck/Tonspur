@@ -24,7 +24,7 @@
 
 @theme {
   /* ── App accent — change this per app ─────────────────── */
-  --accent-h: 45; /* Tonspur: amber/gold (250=slate-blue, 155=emerald, 285=indigo) */
+  --accent-h: 320; /* Neon-Magenta — Kino/Marquee */
 
   --color-accent-50: oklch(0.97 0.02 var(--accent-h));
   --color-accent-100: oklch(0.94 0.04 var(--accent-h));
@@ -45,6 +45,11 @@
   --color-fg: oklch(0.18 0 0);
   --color-fg-muted: oklch(0.45 0 0);
   --color-fg-subtle: oklch(0.6 0 0);
+
+  /* Foreground for text sitting on a saturated fill (accent/danger/success
+   * buttons and badges). `--color-fg` is near-black in light mode, so it is the
+   * wrong token there — this one stays light in both themes. */
+  --color-fg-on-accent: oklch(0.99 0 0);
 
   /* ── Semantic ──────────────────────────────────────────── */
   --color-success: oklch(0.65 0.17 150);
@@ -75,6 +80,14 @@
   --duration-slow: 400ms;
 }
 
+/*
+ * Dark tokens. `@theme` only works at top level, so dark values are plain
+ * custom-property overrides on `:root` (utilities read them via `var()`).
+ * Three states: no `data-theme` = follow the OS; `data-theme="dark"` / `"light"`
+ * = forced. The dark token list appears twice — once in the media query (system)
+ * and once on the forced selector — because CSS can't share one declaration
+ * block across a media query and a plain selector. Keep both blocks in sync.
+ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-surface: oklch(0.18 0 0);

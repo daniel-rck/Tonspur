@@ -1,15 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-
 .tonspur *{box-sizing:border-box;margin:0;padding:0}
 .tonspur{
+  /* The midnight-blue field and the gold are this app's identity, so they stay
+     literal. Everything that has a web-base equivalent is aliased onto the
+     shared token instead of being a second design system: change a token in
+     theme.css and this skin follows. */
   --bg:#0B0E17; --bg2:#141A29; --panel:#161B2A; --panel2:#1E2437;
-  --line:#2A3145; --line2:#3B4256;
-  --text:#F2EFE9; --muted:#8B90A4; --dim:#575D72;
-  --gold:#F5B841; --gold-hi:#FFD782; --gold-dim:#7A5E1C;
-  --teal:#45C8C2; --red:#E5484D; --green:#4ADE80;
+  --line:var(--color-border); --line2:#3B4256;
+  --text:var(--color-fg); --muted:var(--color-fg-muted); --dim:var(--color-fg-subtle);
+  --gold:var(--color-accent-400); --gold-hi:var(--color-accent-300); --gold-dim:#7A5E1C;
+  --teal:#45C8C2;
+  --red:var(--color-danger); --green:var(--color-success);
   --disp:'Anton','Haettenschweiler','Impact','Franklin Gothic Bold',sans-serif;
-  --body:'Space Grotesk','Segoe UI',system-ui,sans-serif;
-  --mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+  --body:var(--font-sans);
+  --mono:var(--font-mono);
   font-family:var(--body);
   color:var(--text);
   min-height:100vh;
@@ -159,3 +162,5 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
   .fade{animation:none}
 }
 
+
+.install-row{display:flex; justify-content:center; margin:8px 0 4px}

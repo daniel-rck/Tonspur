@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getKV, setKV } from "../../lib/db/index.ts";
+import { InstallButton } from "../../lib/ui/index.ts";
 import { Editor } from "./components/Editor.tsx";
 import { Home } from "./components/Home.tsx";
 import { Play } from "./components/Play.tsx";
@@ -178,6 +179,10 @@ export function GamePage() {
           <span className="dot" />
         </div>
         <p className="tagline">Errate den Film an seiner Musik</p>
+        {/* Self-hides once installed, and on browsers that can't install. */}
+        <div className="install-row">
+          <InstallButton />
+        </div>
 
         {screen === "home" && (
           <Home

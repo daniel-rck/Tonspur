@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="de">
+<!-- Dark-only by design (cinema-themed quiz): data-theme is pinned here, so
+     the base theme.css forced-dark block applies and there is no theme to
+     restore before paint. -->
+<html lang="de" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -7,14 +10,6 @@
     <meta name="theme-color" content="#0B0E17" />
     <meta name="description" content="Errate den Film an seiner Musik" />
     <title>Tonspur — Errate den Film an seiner Musik</title>
-    <script>
-      (() => {
-        try {
-          const t = localStorage.getItem("theme");
-          if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
-        } catch {}
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>
