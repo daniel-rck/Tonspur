@@ -1,1 +1,8 @@
+/* Self-hosted fonts. A Google Fonts CDN @import would make an offline-first
+   PWA depend on the network for its typography — and CSS requires every
+   @import to precede all rules, so they belong here at the top. */
+@import "@fontsource/anton/400.css";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/jetbrains-mono";
+
 @import "./lib/ui/theme.css";
