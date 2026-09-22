@@ -7,6 +7,7 @@ interface YTPlayer {
   stopVideo(): void;
   mute(): void;
   unMute(): void;
+  getVideoUrl?(): string;
 }
 
 interface YTNamespace {
@@ -55,6 +56,7 @@ export function useYouTube(): YT {
   // latest one and apply it once the player is ready.
   const pending = useRef<{ id: string; start: number } | null>(null);
   const seq = useRef(0);
+  const activeId = useRef("");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [playingSeq, setPlayingSeq] = useState(-1);
@@ -63,6 +65,21 @@ export function useYouTube(): YT {
   useEffect(() => {
     let cancelled = false;
     let tries = 0;
+
+    /**
+     * Events carry no load id, so a late event from the previous video could
+     * be credited to the newest load. Only accept events while the player
+     * still holds the video that load asked for.
+     */
+    function isActive() {
+      let url = "";
+      try {
+        url = player.current?.getVideoUrl?.() ?? "";
+      } catch {
+        /* player not ready */
+      }
+      return !url || url.includes(activeId.current);
+    }
 
     function build() {
       if (cancelled) return;
@@ -102,10 +119,10 @@ export function useYouTube(): YT {
             }
           },
           onStateChange: (e: { data: number }) => {
-            if (!cancelled && e.data === STATE_PLAYING) setPlayingSeq(seq.current);
+            if (!cancelled && e.data === STATE_PLAYING && isActive()) setPlayingSeq(seq.current);
           },
           onError: () => {
-            if (!cancelled) setErrorSeq(seq.current);
+            if (!cancelled && isActive()) setErrorSeq(seq.current);
           },
         },
       });
@@ -149,6 +166,7 @@ export function useYouTube(): YT {
       errorSeq,
       load: (id, start) => {
         const n = ++seq.current;
+        activeId.current = id;
         if (!readyRef.current) {
           pending.current = { id, start: start ?? 0 };
           return n;

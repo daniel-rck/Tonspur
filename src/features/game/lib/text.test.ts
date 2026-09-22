@@ -99,4 +99,14 @@ describe("extractId", () => {
   it("finds the link inside pasted share text", () => {
     expect(extractId(`Schau mal: https://youtu.be/${RICK_ID} 🎬`)).toBe(RICK_ID);
   });
+
+  it("finds scheme-less YouTube links in text, including nocookie embeds", () => {
+    expect(extractId(`siehe www.youtube.com/watch?v=${RICK_ID}`)).toBe(RICK_ID);
+    expect(extractId(`youtube-nocookie.com/embed/${RICK_ID} ok`)).toBe(RICK_ID);
+  });
+
+  it("ignores /embed/ paths on other hosts in text", () => {
+    expect(extractId(`other.example/embed/${RICK_ID}`)).toBe("");
+    expect(extractId(`notyoutube.com/embed/${RICK_ID}`)).toBe("");
+  });
 });

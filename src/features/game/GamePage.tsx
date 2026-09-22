@@ -38,7 +38,7 @@ export function GamePage() {
   // While Play waits for the video to start, the time-attack clock is held.
   const holdRef = useRef(false);
   // Videos the player refused this session (removed, region-locked, …).
-  const brokenRef = useRef(new Set<string>());
+  const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
   const [bestBefore, setBestBefore] = useState(0);
   const [remainingMs, setRemainingMs] = useState(0);
   const resultsRef = useRef<RoundResult[]>([]);
@@ -76,6 +76,7 @@ export function GamePage() {
   }, [muted, yt]);
 
   const playable = useMemo(() => pack.filter((m) => m.youtubeId), [pack]);
+  const available = useMemo(() => playable.filter((m) => !broken.has(m.id)), [playable, broken]);
   const timeAttack = isTimeAttack(roundCount);
   const hsKey = hsKeyFor(mode, roundCount);
   const hits = useMemo(() => results.filter((r) => r.correct).length, [results]);
@@ -108,7 +109,8 @@ export function GamePage() {
   }, [timeAttack, screen, yt, saveHighscore, hsKey]);
 
   const startGame = useCallback(() => {
-    const pool = shuffle(playable.filter((m) => !brokenRef.current.has(m.id)).map((m) => m.id));
+    const pool = shuffle(available.map((m) => m.id));
+    if (pool.length === 0) return;
     if (isTimeAttack(roundCount)) {
       setOrder(pool);
       deadlineRef.current = performance.now() + TIME_START_MS;
@@ -124,7 +126,7 @@ export function GamePage() {
     setBestBefore(highscores[hsKey] ?? 0);
     holdRef.current = false;
     setScreen("play");
-  }, [playable, roundCount, highscores, hsKey]);
+  }, [available, roundCount, highscores, hsKey]);
 
   const finishRound = useCallback(
     (movie: PackEntry, gained: number, elapsed: number, correct: boolean) => {
@@ -149,7 +151,7 @@ export function GamePage() {
   const advanceTimeAttack = useCallback(() => {
     setOrder((o) => {
       if (idx + 1 < o.length) return o;
-      const batch = shuffle(playable.map((m) => m.id));
+      const batch = shuffle(available.map((m) => m.id));
       const last = o[o.length - 1];
       if (batch.length > 1 && batch[0] === last) {
         // Vermeide, dass derselbe Film unmittelbar hintereinander gezeigt wird.
@@ -161,13 +163,13 @@ export function GamePage() {
       return [...o, ...batch];
     });
     setIdx((i) => i + 1);
-  }, [idx, playable]);
+  }, [idx, available]);
 
   /** The current video won't play: swap in another film without scoring the round. */
   const replaceCurrent = useCallback(() => {
     const id = order[idx];
-    if (id) brokenRef.current.add(id);
-    const pool = playable.map((m) => m.id).filter((m) => !brokenRef.current.has(m));
+    if (id) setBroken((b) => new Set(b).add(id));
+    const pool = available.map((m) => m.id).filter((m) => m !== id);
     const next = replaceAt(order, idx, pool);
     holdRef.current = false;
     if (idx >= next.length) {
@@ -178,7 +180,7 @@ export function GamePage() {
       return;
     }
     setOrder(next);
-  }, [order, idx, playable, saveHighscore, hsKey, timeAttack, hits, results, yt]);
+  }, [order, idx, available, saveHighscore, hsKey, timeAttack, hits, results, yt]);
 
   const nextRound = useCallback(() => {
     if (idx + 1 >= order.length) {
@@ -224,7 +226,7 @@ export function GamePage() {
 
         {screen === "home" && (
           <Home
-            playableCount={playable.length}
+            playableCount={available.length}
             total={pack.length}
             mode={mode}
             setMode={setMode}

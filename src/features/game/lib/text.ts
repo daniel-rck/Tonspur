@@ -76,7 +76,10 @@ export function extractId(input: string): string {
   } catch {
     /* not a url */
   }
-  const m = s.match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/|\/(?:embed|shorts|live)\/)([\w-]{11})/);
+  // Links inside pasted text: same host allowlist as above, scheme optional.
+  const m = s.match(
+    /(?:^|[^\w.-])(?:[\w-]+\.)*(?:youtube(?:-nocookie)?\.com\/(?:\S*[?&]v=|(?:embed|shorts|live)\/)|youtu\.be\/)([\w-]{11})/,
+  );
   return m?.[1] ?? "";
 }
 

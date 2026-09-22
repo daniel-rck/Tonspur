@@ -49,7 +49,7 @@ bun run build       # SPA + PWA
   in `src/index.css` **vor** allen Regeln, weil die CSS-Spec das verlangt.
 - **`game.css` ist die App-Haut, kein zweites Designsystem.** Der
   `.tonspur`-Namespace aliast auf die web-base-Tokens (`--text` →
-  `var(--color-fg)`, `--gold` → `var(--color-accent-400)`, …). Neue Farben
+  `var(--color-fg)`, `--gold` → `var(--color-accent-300)`, …). Neue Farben
   daher zuerst als Token in `theme.css` suchen, nicht als Hex in `game.css`
   anlegen. Literal bleiben nur die Identitätsfarben: das mitternachtsblaue Feld
   (`--bg`, `--bg2`, `--panel`) und `--teal`.
