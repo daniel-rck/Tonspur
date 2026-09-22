@@ -7,7 +7,7 @@
   --bg:#0B0E17; --bg2:#141A29; --panel:#161B2A; --panel2:#1E2437;
   --line:var(--color-border); --line2:#3B4256;
   --text:var(--color-fg); --muted:var(--color-fg-muted); --dim:var(--color-fg-subtle);
-  --gold:var(--color-accent-400); --gold-hi:var(--color-accent-300); --gold-dim:#7A5E1C;
+  --gold:var(--color-accent-300); --gold-hi:var(--color-accent-200); --gold-dim:#7A5E1C;
   --teal:#45C8C2;
   --red:var(--color-danger); --green:var(--color-success);
   --disp:'Anton','Haettenschweiler','Impact','Franklin Gothic Bold',sans-serif;
@@ -86,6 +86,7 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
 .console{display:flex;flex-direction:column;align-items:center;gap:22px;padding:8px 0 4px}
 .ring-wrap{position:relative;width:230px;height:230px}
 .ring-wrap svg{transform:rotate(-90deg)}
+.ring-arc{transition:stroke-dashoffset .1s linear;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--gold) 50%,transparent))}
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .pts{font-family:var(--mono);font-weight:700;font-size:46px;color:var(--gold);letter-spacing:-.02em;line-height:1}
 .pts-lbl{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
@@ -94,7 +95,6 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
 .eq{display:flex;align-items:flex-end;gap:4px;height:34px;margin-top:10px}
 .eq-bar{width:5px;border-radius:3px;background:linear-gradient(180deg,var(--teal),#1f6f6c);height:20%}
 .playing .eq-bar{animation:eq .9s ease-in-out infinite alternate}
-/* biome-ignore lint/complexity/noImportantStyles: muted/finished state must force the equalizer animation off, overriding .playing .eq-bar */
 .eq-bar.mut{background:var(--line2);animation:none!important;height:14%}
 
 .redacted{margin-top:2px;height:26px;width:min(320px,82%);border-radius:6px;
@@ -107,11 +107,20 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
   appearance:none;text-align:left;cursor:pointer;font-family:var(--body);font-weight:600;font-size:16px;
   background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:13px;padding:16px 18px;transition:.12s;
 }
-.choice:hover{border-color:var(--gold);background:var(--panel)}
+.choice:hover:not(:disabled){border-color:var(--gold);background:var(--panel)}
 .choice[data-state="right"]{border-color:var(--green);background:rgba(74,222,128,.12);color:#c8f5d6}
 .choice[data-state="wrong"]{border-color:var(--red);background:rgba(229,72,77,.12);color:#f6c9ca}
 .choice[data-state="miss"]{opacity:.4}
 .choice:disabled{cursor:default}
+.choice:disabled[data-state=""]{opacity:.55}
+.choice:focus-visible,.btn:focus-visible,.seg button:focus-visible,.link:focus-visible,.iconbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* Key hints only where a physical keyboard is likely. */
+.choice .key{display:none}
+@media (hover:hover) and (pointer:fine){
+  .choice{display:flex;align-items:center;gap:12px}
+  .choice .key{display:inline-grid;place-items:center;flex-shrink:0;width:22px;height:22px;border-radius:6px;
+    border:1px solid var(--line2);font-family:var(--mono);font-size:12px;font-weight:600;color:var(--dim)}
+}
 
 .mask{font-family:var(--mono);letter-spacing:.28em;color:var(--muted);font-size:16px;text-align:center;margin-top:10px}
 .mask b{color:var(--gold)}
@@ -142,6 +151,7 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
 .iconbtn:hover{color:var(--text);border-color:var(--line2)}
 .iconbtn.del:hover{color:var(--red);border-color:var(--red)}
 
+.notice .btn{display:block}
 .notice{background:rgba(69,200,194,.08);border:1px solid rgba(69,200,194,.25);border-radius:11px;padding:12px 14px;font-size:13px;color:#b9e9e6;line-height:1.5}
 .warn{background:rgba(245,184,65,.07);border:1px solid var(--gold-dim);color:#f0d59a}
 
@@ -157,7 +167,6 @@ input.fld.err{border-color:var(--red);animation:shake .4s}
 .fade{animation:fade .35s ease}
 
 @media (prefers-reduced-motion:reduce){
-  /* biome-ignore lint/complexity/noImportantStyles: reduced-motion must forcibly stop all decorative animation (accessibility) */
   .playing .eq-bar,.brand .dot,.redacted::after{animation:none!important}
   .fade{animation:none}
 }

@@ -7,11 +7,15 @@ interface YTPlayer {
   stopVideo(): void;
   mute(): void;
   unMute(): void;
+  getVideoUrl?(): string;
 }
 
 interface YTNamespace {
   Player: new (elementId: string, opts: unknown) => YTPlayer;
 }
+
+/** YT.PlayerState.PLAYING */
+const STATE_PLAYING = 1;
 
 declare global {
   interface Window {
@@ -23,7 +27,12 @@ declare global {
 export interface YT {
   ready: boolean;
   failed: boolean;
-  load: (id: string, start?: number) => void;
+  /** Sequence number of the last load() that actually started playing, or -1. */
+  playingSeq: number;
+  /** Sequence number of the last load() the player reported an error for, or -1. */
+  errorSeq: number;
+  /** Loads and plays a video. Returns its sequence number (see playingSeq/errorSeq). */
+  load: (id: string, start?: number) => number;
   play: () => void;
   pause: () => void;
   stop: () => void;
@@ -42,12 +51,35 @@ const PLAYER_EL_ID = "tonspur-yt";
  */
 export function useYouTube(): YT {
   const player = useRef<YTPlayer | null>(null);
+  const readyRef = useRef(false);
+  // A load() issued before onReady would be dropped by the player; keep the
+  // latest one and apply it once the player is ready.
+  const pending = useRef<{ id: string; start: number } | null>(null);
+  const seq = useRef(0);
+  const activeId = useRef("");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [playingSeq, setPlayingSeq] = useState(-1);
+  const [errorSeq, setErrorSeq] = useState(-1);
 
   useEffect(() => {
     let cancelled = false;
     let tries = 0;
+
+    /**
+     * Events carry no load id, so a late event from the previous video could
+     * be credited to the newest load. Only accept events while the player
+     * still holds the video that load asked for.
+     */
+    function isActive() {
+      let url = "";
+      try {
+        url = player.current?.getVideoUrl?.() ?? "";
+      } catch {
+        /* player not ready */
+      }
+      return !url || url.includes(activeId.current);
+    }
 
     function build() {
       if (cancelled) return;
@@ -73,7 +105,24 @@ export function useYouTube(): YT {
         },
         events: {
           onReady: () => {
-            if (!cancelled) setReady(true);
+            if (cancelled) return;
+            readyRef.current = true;
+            setReady(true);
+            const p = pending.current;
+            pending.current = null;
+            if (p) {
+              try {
+                player.current?.loadVideoById({ videoId: p.id, startSeconds: p.start });
+              } catch {
+                /* player gone */
+              }
+            }
+          },
+          onStateChange: (e: { data: number }) => {
+            if (!cancelled && e.data === STATE_PLAYING && isActive()) setPlayingSeq(seq.current);
+          },
+          onError: () => {
+            if (!cancelled && isActive()) setErrorSeq(seq.current);
           },
         },
       });
@@ -95,7 +144,7 @@ export function useYouTube(): YT {
       const tag = document.createElement("script");
       tag.id = API_SCRIPT_ID;
       tag.src = "https://www.youtube.com/iframe_api";
-      tag.onerror = () => setFailed(true);
+      tag.addEventListener("error", () => setFailed(true));
       document.head.appendChild(tag);
     } else {
       build();
@@ -113,12 +162,21 @@ export function useYouTube(): YT {
     () => ({
       ready,
       failed,
+      playingSeq,
+      errorSeq,
       load: (id, start) => {
+        const n = ++seq.current;
+        activeId.current = id;
+        if (!readyRef.current) {
+          pending.current = { id, start: start ?? 0 };
+          return n;
+        }
         try {
           player.current?.loadVideoById({ videoId: id, startSeconds: start ?? 0 });
         } catch {
           /* player not ready */
         }
+        return n;
       },
       play: () => {
         try {
@@ -156,6 +214,6 @@ export function useYouTube(): YT {
         }
       },
     }),
-    [ready, failed],
+    [ready, failed, playingSeq, errorSeq],
   );
 }

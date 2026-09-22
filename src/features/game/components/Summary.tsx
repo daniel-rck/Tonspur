@@ -4,14 +4,25 @@ interface SummaryProps {
   results: RoundResult[];
   score: number;
   best: number;
+  /** Record for this format before the game started. */
+  bestBefore: number;
   timeAttack: boolean;
   onAgain: () => void;
   onHome: () => void;
 }
 
-export function Summary({ results, score, best, timeAttack, onAgain, onHome }: SummaryProps) {
+export function Summary({
+  results,
+  score,
+  best,
+  bestBefore,
+  timeAttack,
+  onAgain,
+  onHome,
+}: SummaryProps) {
   const hits = results.filter((r) => r.correct).length;
-  const isRecord = timeAttack ? hits >= best && hits > 0 : score >= best && score > 0;
+  // Only a strict improvement is a record; a tie is not.
+  const isRecord = (timeAttack ? hits : score) > bestBefore;
   return (
     <div className="fade">
       <div className="card center">
@@ -30,36 +41,40 @@ export function Summary({ results, score, best, timeAttack, onAgain, onHome }: S
           )}
         </div>
       </div>
-      <div className="card">
-        {results.map((r, i) => (
-          <div
-            className="sumrow"
-            // biome-ignore lint/suspicious/noArrayIndexKey: results are append-only and stable within a game
-            key={i}
-          >
-            <span className="t">
-              <span style={{ color: r.correct ? "var(--green)" : "var(--red)" }}>
-                {r.correct ? "✓" : "✕"}
+      {results.length > 0 && (
+        <div className="card">
+          {results.map((r, i) => (
+            <div className="sumrow" key={i}>
+              <span className="t">
+                <span
+                  role="img"
+                  aria-label={r.correct ? "richtig" : "falsch"}
+                  style={{ color: r.correct ? "var(--green)" : "var(--red)" }}
+                >
+                  {r.correct ? "✓" : "✕"}
+                </span>
+                <span>{r.title}</span>
               </span>
-              <span>{r.title}</span>
-            </span>
-            <span className="row" style={{ gap: 12 }}>
-              <span className="dim" style={{ fontFamily: "var(--mono)", fontSize: 12 }}>
-                {(r.elapsed / 1000).toFixed(1)}s
+              <span className="row" style={{ gap: 12 }}>
+                <span className="dim" style={{ fontFamily: "var(--mono)", fontSize: 12 }}>
+                  {(r.elapsed / 1000).toFixed(1)}s
+                </span>
+                {!timeAttack && (
+                  <span
+                    style={{
+                      fontFamily: "var(--mono)",
+                      fontWeight: 700,
+                      color: r.gained ? "var(--gold)" : "var(--dim)",
+                    }}
+                  >
+                    +{r.gained.toLocaleString("de-DE")}
+                  </span>
+                )}
               </span>
-              <span
-                style={{
-                  fontFamily: "var(--mono)",
-                  fontWeight: 700,
-                  color: r.gained ? "var(--gold)" : "var(--dim)",
-                }}
-              >
-                +{r.gained.toLocaleString("de-DE")}
-              </span>
-            </span>
-          </div>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
       <button type="button" className="btn btn-gold mt" onClick={onAgain}>
         Nochmal spielen
       </button>

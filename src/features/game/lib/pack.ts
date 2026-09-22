@@ -36,3 +36,22 @@ export function buildDefaultPack(): PackEntry[] {
     answers: [m.title, ...m.answers],
   }));
 }
+
+/**
+ * Swap the id at `idx` for one from `pool` that isn't already queued, or — if
+ * every candidate is queued (time attack cycles the whole pool) — for any
+ * other id, preferring one that isn't the previous film. Drops the slot when there is no alternative at all.
+ */
+export function replaceAt(order: string[], idx: number, pool: string[]): string[] {
+  const current = order[idx];
+  const fresh = pool.filter((id) => !order.includes(id));
+  const other = pool.filter((id) => id !== current);
+  // Avoid the film that was just played, as long as there is another choice.
+  const notPrev = other.filter((id) => id !== order[idx - 1]);
+  const candidates = fresh.length ? fresh : notPrev.length ? notPrev : other;
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  const next = [...order];
+  if (pick === undefined) next.splice(idx, 1);
+  else next[idx] = pick;
+  return next;
+}

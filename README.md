@@ -5,7 +5,7 @@ spielt die Titelmelodie eines Films, du rätst den Titel — per 3 Vorschlägen
 oder frei. Wer schneller richtig liegt, bekommt mehr Punkte.
 
 Gebaut nach den [`web-base`](https://github.com/daniel-rck/web-base)-Konventionen
-(React 19 · Vite · TypeScript strict · Tailwind 4 · Biome · idb · Cloudflare
+(React 19 · Vite · TypeScript strict · Tailwind 4 · oxlint/oxfmt · idb · Cloudflare
 Worker). Daten liegen lokal im Browser (IndexedDB), es gibt kein Konto und kein
 Tracking.
 
@@ -20,7 +20,7 @@ Qualitäts-Gates (wie in allen web-base-Apps):
 
 ```bash
 bun run typecheck    # tsc -b --noEmit
-bun run lint         # biome check .
+bun run lint         # oxlint + oxfmt --check
 bun run test         # vitest run
 bun run build        # tsc -b && vite build  →  dist/
 ```

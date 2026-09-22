@@ -7,8 +7,14 @@ import { Play } from "./components/Play.tsx";
 import { Result } from "./components/Result.tsx";
 import { Summary } from "./components/Summary.tsx";
 import "./game.css";
-import { buildDefaultPack, HS_KEY, STORE_KEY, shuffle } from "./lib/pack.ts";
-import { isTimeAttack, TIME_START_MS, timeBonus } from "./lib/scoring.ts";
+import { buildDefaultPack, HS_KEY, replaceAt, STORE_KEY, shuffle } from "./lib/pack.ts";
+import {
+  hsKeyFor,
+  isTimeAttack,
+  migrateHighscores,
+  TIME_START_MS,
+  timeBonus,
+} from "./lib/scoring.ts";
 import type { Mode, PackEntry, RoundResult, Screen } from "./types.ts";
 import { useYouTube } from "./useYouTube.ts";
 
@@ -29,6 +35,11 @@ export function GamePage() {
   const [streak, setStreak] = useState(0);
   const [results, setResults] = useState<RoundResult[]>([]);
   const deadlineRef = useRef(0);
+  // While Play waits for the video to start, the time-attack clock is held.
+  const holdRef = useRef(false);
+  // Videos the player refused this session (removed, region-locked, …).
+  const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
+  const [bestBefore, setBestBefore] = useState(0);
   const [remainingMs, setRemainingMs] = useState(0);
   const resultsRef = useRef<RoundResult[]>([]);
 
@@ -37,7 +48,11 @@ export function GamePage() {
       const stored = await getKV<PackEntry[]>(STORE_KEY);
       if (stored?.length) setPack(stored);
       const hs = await getKV<Record<string, number>>(HS_KEY);
-      if (hs) setHighscores(hs);
+      if (hs) {
+        const migrated = migrateHighscores(hs);
+        setHighscores(migrated);
+        if (Object.keys(migrated).join() !== Object.keys(hs).join()) void setKV(HS_KEY, migrated);
+      }
       loaded.current = true;
     })();
   }, []);
@@ -61,8 +76,9 @@ export function GamePage() {
   }, [muted, yt]);
 
   const playable = useMemo(() => pack.filter((m) => m.youtubeId), [pack]);
+  const available = useMemo(() => playable.filter((m) => !broken.has(m.id)), [playable, broken]);
   const timeAttack = isTimeAttack(roundCount);
-  const hsKey = timeAttack ? `${mode}-time` : mode;
+  const hsKey = hsKeyFor(mode, roundCount);
   const hits = useMemo(() => results.filter((r) => r.correct).length, [results]);
 
   useEffect(() => {
@@ -72,8 +88,12 @@ export function GamePage() {
   useEffect(() => {
     if (!timeAttack || screen !== "play") return;
     let raf = 0;
+    let last = performance.now();
     const tick = () => {
-      const rem = deadlineRef.current - performance.now();
+      const now = performance.now();
+      if (holdRef.current) deadlineRef.current += now - last;
+      last = now;
+      const rem = deadlineRef.current - now;
       if (rem <= 0) {
         setRemainingMs(0);
         yt.stop();
@@ -89,7 +109,8 @@ export function GamePage() {
   }, [timeAttack, screen, yt, saveHighscore, hsKey]);
 
   const startGame = useCallback(() => {
-    const pool = shuffle(playable.map((m) => m.id));
+    const pool = shuffle(available.map((m) => m.id));
+    if (pool.length === 0) return;
     if (isTimeAttack(roundCount)) {
       setOrder(pool);
       deadlineRef.current = performance.now() + TIME_START_MS;
@@ -102,8 +123,10 @@ export function GamePage() {
     setScore(0);
     setStreak(0);
     setResults([]);
+    setBestBefore(highscores[hsKey] ?? 0);
+    holdRef.current = false;
     setScreen("play");
-  }, [playable, roundCount]);
+  }, [available, roundCount, highscores, hsKey]);
 
   const finishRound = useCallback(
     (movie: PackEntry, gained: number, elapsed: number, correct: boolean) => {
@@ -128,7 +151,7 @@ export function GamePage() {
   const advanceTimeAttack = useCallback(() => {
     setOrder((o) => {
       if (idx + 1 < o.length) return o;
-      const batch = shuffle(playable.map((m) => m.id));
+      const batch = shuffle(available.map((m) => m.id));
       const last = o[o.length - 1];
       if (batch.length > 1 && batch[0] === last) {
         // Vermeide, dass derselbe Film unmittelbar hintereinander gezeigt wird.
@@ -140,7 +163,24 @@ export function GamePage() {
       return [...o, ...batch];
     });
     setIdx((i) => i + 1);
-  }, [idx, playable]);
+  }, [idx, available]);
+
+  /** The current video won't play: swap in another film without scoring the round. */
+  const replaceCurrent = useCallback(() => {
+    const id = order[idx];
+    if (id) setBroken((b) => new Set(b).add(id));
+    const pool = available.map((m) => m.id).filter((m) => m !== id);
+    const next = replaceAt(order, idx, pool);
+    holdRef.current = false;
+    if (idx >= next.length) {
+      saveHighscore(hsKey, timeAttack ? hits : results.reduce((a, r) => a + r.gained, 0));
+      yt.stop();
+      setOrder(next);
+      setScreen(results.length ? "summary" : "home");
+      return;
+    }
+    setOrder(next);
+  }, [order, idx, available, saveHighscore, hsKey, timeAttack, hits, results, yt]);
 
   const nextRound = useCallback(() => {
     if (idx + 1 >= order.length) {
@@ -186,7 +226,7 @@ export function GamePage() {
 
         {screen === "home" && (
           <Home
-            playableCount={playable.length}
+            playableCount={available.length}
             total={pack.length}
             mode={mode}
             setMode={setMode}
@@ -196,6 +236,7 @@ export function GamePage() {
             onEdit={() => setScreen("editor")}
             highscore={highscores[hsKey] ?? 0}
             ytFailed={yt.failed}
+            ytReady={yt.ready}
           />
         )}
 
@@ -227,6 +268,10 @@ export function GamePage() {
             onHit={() => {
               deadlineRef.current += timeBonus(hits + 1) * 1000;
             }}
+            onHold={(hold) => {
+              holdRef.current = hold;
+            }}
+            onUnplayable={replaceCurrent}
             onQuit={() => {
               yt.stop();
               setScreen("home");
@@ -249,6 +294,7 @@ export function GamePage() {
             results={results}
             score={score}
             best={highscores[hsKey] ?? 0}
+            bestBefore={bestBefore}
             timeAttack={timeAttack}
             onAgain={startGame}
             onHome={() => setScreen("home")}

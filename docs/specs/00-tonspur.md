@@ -14,11 +14,25 @@ richtige Antworten geben mehr Punkte; eine Serie (Streak) gibt Bonus.
   Zustandsmaschine (`home → play → result → summary`, plus `editor`). Router
   hat eine Route `/` → `GamePage` (lazy).
 - **Audio:** ausschließlich YouTube IFrame Player API (`useYouTube`), Player
-  versteckt eingebunden. Kein Audio-Extrahieren.
+  versteckt eingebunden. Kein Audio-Extrahieren. `load()` vor `onReady` wird
+  gepuffert; jede Ladung bekommt eine Sequenznummer, gegen die `playingSeq`
+  (Player meldet PLAYING) und `errorSeq` (`onError`) gemeldet werden.
+- **Rundenablauf:** `Play` startet in `loading` — die Uhr (bzw. im Zeitmodus
+  die globale Uhr) steht, Antworten sind gesperrt, bis das Video wirklich
+  spielt (spätestens nach 4 s Kulanz). Meldet der Player einen Fehler, zeigt
+  die Runde einen Hinweis und „Anderer Film" ersetzt den Film per
+  `replaceAt` (`lib/pack.ts`), ohne die Runde zu werten; der Film wird für die
+  Sitzung ausgeschlossen.
+- **Tastatur:** `1`–`3` wählen einen Vorschlag, `Esc` gibt auf/überspringt,
+  auf dem Ergebnis-Screen ist „Nächste Runde" fokussiert (`Enter`).
 - **Persistenz:** IndexedDB über `src/lib/db` (Key-Value-Store `kv`). Zwei
   Schlüssel: `pack:v4` (Filmliste inkl. der YouTube-Links der Person) und
-  `highscores:v1` (bester Score je Modus). Kein localStorage für App-Daten.
-- **Daten:** `src/features/game/movies.ts` — 129 Filme. Regel: ab 1995 ODER
+  `highscores:v1` (bester Score je Modus **und** Rundenformat, Schlüssel aus
+  `hsKeyFor`: `choice-5`, `free-10`, `choice-all`, `free-time`, …). Ältere
+  Einträge unter dem bloßen Modus (`choice`/`free`) übernimmt
+  `migrateHighscores` als 5-Runden-Rekord. „Neuer Rekord" heißt: strikt besser
+  als der Rekord vor Spielbeginn. Kein localStorage für App-Daten.
+- **Daten:** `src/features/game/movies.ts` — 203 Filme. Regel: ab 1995 ODER
   IMDb ≥ 8.4, plus `exception: true`-Einträge für ikonische ältere Themes. Die
   Default-YouTube-Links liegen in `movie-links.ts` (generiert von
   `scripts/fetch-links.ts` via yt-dlp) und werden in `buildDefaultPack` gemerged.
@@ -33,8 +47,8 @@ Laut `07-conventions.md` brauchen Abweichungen eine dokumentierte Entscheidung.
    Spiel; Bottom-Nav/Sidebar und die geteilte `AppShell` passen nicht. Statt
    Tailwind-Utilities + Theme-Tokens nutzt der Spiel-Screen eine eigene,
    art-directed `src/features/game/game.css` (kinoartig, Gold/Teal auf Dunkel).
-   `theme.css` (Tailwind + Tokens, Akzent-Hue 45) ist trotzdem eingebunden, für
-   zukünftige Nicht-Spiel-Ansichten. Folge: `web-base update layout` ist für
+   `theme.css` (Tailwind + Tokens, Akzent-Hue 80 = Marquee-Gold) ist trotzdem
+   eingebunden; `game.css` aliast darauf (`--gold` → `--color-accent-300`). Folge: `web-base update layout` ist für
    diese App nicht relevant.
 2. **Key-Value-Store statt pro-Entität-Stores.** Das `storage`-Template legt
    typischerweise eigene Object-Stores je Entität an; hier genügt ein `kv`-Store
@@ -42,8 +56,10 @@ Laut `07-conventions.md` brauchen Abweichungen eine dokumentierte Entscheidung.
    Invariante „App-Daten in IndexedDB" bleibt erfüllt.
 3. **Reine Logik aus `GamePage` extrahiert.** Text-/Scoring-/Pack-Utilities
    liegen in `src/features/game/lib/` (`text.ts`, `scoring.ts`, `pack.ts`) und
-   sind per Vitest getestet (`lib/text.test.ts`, `lib/scoring.test.ts`:
-   `normTitle`, `lev`/`isMatch`, `extractId`, `pointsNow`). Die Screens sind je
+   sind per Vitest getestet (`lib/text.test.ts`, `lib/scoring.test.ts`,
+   `lib/pack.test.ts`: `normTitle`, `lev`/`isMatch`, `extractId`, `pointsNow`,
+   `hsKeyFor`/`migrateHighscores`, `replaceAt`). `extractId` akzeptiert nur
+   echte IDs und YouTube-URLs, keine beliebigen 11-Zeichen-Wörter. Die Screens sind je
    eine Datei unter `components/`.
 
 ## Offen / später

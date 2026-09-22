@@ -165,7 +165,7 @@ function rankCandidates(cands: Candidate[], movie: Movie): Ranked[] {
   const pool = inRange.length > 0 ? inRange : cands;
   return pool
     .map((c) => ({ c, s: scoreCandidate(c, movie) }))
-    .sort((a, b) => b.s - a.s || b.c.views - a.c.views);
+    .toSorted((a, b) => b.s - a.s || b.c.views - a.c.views);
 }
 
 /* ── Concurrency pool ─────────────────────────────────────────────────────── */
@@ -174,7 +174,7 @@ async function mapPool<T, R>(
   n: number,
   fn: (item: T, index: number) => Promise<R>,
 ): Promise<R[]> {
-  const results = new Array<R>(items.length);
+  const results: R[] = Array.from({ length: items.length });
   let cursor = 0;
   const worker = async () => {
     while (cursor < items.length) {
@@ -206,10 +206,12 @@ function fmtDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** Escape a value for a Markdown table cell. */
+const cell = (v: string) => v.replace(/\|/g, "\\|");
+
 function renderReport(reports: Report[], total: number): string {
   const withId = reports.filter((r) => r.chosen).length;
   const problems = reports.filter((r) => r.flag !== "ok");
-  const cell = (v: string) => v.replace(/\|/g, "\\|");
 
   const problemLines = problems
     .map((r) => {

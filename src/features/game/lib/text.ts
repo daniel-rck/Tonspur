@@ -28,7 +28,7 @@ export function lev(a: string, b: string): number {
   if (m === 0) return n;
   if (n === 0) return m;
   let prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
-  let cur: number[] = new Array(n + 1).fill(0);
+  let cur: number[] = Array.from({ length: n + 1 }, () => 0);
   for (let i = 1; i <= m; i++) {
     cur[0] = i;
     for (let j = 1; j <= n; j++) {
@@ -53,22 +53,34 @@ export function isMatch(guess: string, answers: string[]): boolean {
   });
 }
 
-/** Extract an 11-char YouTube video id from a raw id, a URL, or free text. */
+const ID_RE = /^[\w-]{11}$/;
+const YT_HOST_RE = /(^|\.)(youtube\.com|youtube-nocookie\.com|youtu\.be)$/;
+
+/**
+ * Extract an 11-char YouTube video id from a raw id, a YouTube URL, or text
+ * containing one (e.g. a pasted share message). Anything else yields "" —
+ * arbitrary 11-char words must not be mistaken for an id.
+ */
 export function extractId(input: string): string {
   const s = String(input ?? "").trim();
-  if (/^[\w-]{11}$/.test(s)) return s;
+  if (ID_RE.test(s)) return s;
   try {
     const u = new URL(s);
-    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1, 12);
-    const v = u.searchParams.get("v");
-    if (v) return v;
-    const m = u.pathname.match(/\/(embed|shorts)\/([\w-]{11})/);
-    if (m?.[2]) return m[2];
+    if (YT_HOST_RE.test(u.hostname)) {
+      const cand = u.hostname.endsWith("youtu.be")
+        ? u.pathname.slice(1, 12)
+        : (u.searchParams.get("v") ?? u.pathname.match(/\/(embed|shorts|live)\/([\w-]{11})/)?.[2]);
+      if (cand && ID_RE.test(cand)) return cand;
+    }
+    return "";
   } catch {
     /* not a url */
   }
-  const m = s.match(/[\w-]{11}/);
-  return m?.[0] ?? "";
+  // Links inside pasted text: same host allowlist as above, scheme optional.
+  const m = s.match(
+    /(?:^|[^\w.-])(?:[\w-]+\.)*(?:youtube(?:-nocookie)?\.com\/(?:\S*[?&]v=|(?:embed|shorts|live)\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  return m?.[1] ?? "";
 }
 
 /** Build a YouTube search-results URL for a query. */

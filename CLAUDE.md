@@ -18,7 +18,7 @@ ohne Account, ohne Tracking. Single-Route-PWA mit YouTube-Embed als Audioquelle.
 Vor jedem Commit grün halten:
 
 ```bash
-bun run lint        # Biome (check)
+bun run lint        # oxlint + oxfmt --check
 bun run typecheck   # tsc (App + SW + Worker)
 bun run test        # Vitest
 bun run build       # SPA + PWA
@@ -27,8 +27,12 @@ bun run build       # SPA + PWA
 ## Konventionen (gemäß web-base)
 
 - **Bun** als Runtime & Package-Manager (kein npm/yarn-Lockfile).
-- **Biome** für Lint + Format. Geteilte Regeln in `biome.base.json` (zentral
-  verwaltet, nicht anfassen), App-Ausnahmen in `biome.json` → `overrides`.
+- **oxlint + oxfmt** für Lint + Format (seit web-base 0.4.0, vorher Biome).
+  Zentral verwaltet und nicht anfassen: `oxlint.base.json`, `.oxfmtrc.json`.
+  App-Ausnahmen: Lint-Regeln in `.oxlintrc.json` (`rules`/`overrides`),
+  Formatter-Ausschlüsse in `.prettierignore`. Unterdrückungen als
+  `// oxlint-disable-next-line <regel> -- <grund>`; bei Effect-Dependencies
+  gehört der Kommentar vor die `}, [...]);`-Zeile.
 - **TypeScript 7 strict** inkl. `noUncheckedIndexedAccess`;
   `verbatimModuleSyntax` (→ `import type`); `type` statt `interface`.
 - **Deutsche UI + README, englischer Quellcode** (Bezeichner, Kommentare,
@@ -45,18 +49,19 @@ bun run build       # SPA + PWA
   in `src/index.css` **vor** allen Regeln, weil die CSS-Spec das verlangt.
 - **`game.css` ist die App-Haut, kein zweites Designsystem.** Der
   `.tonspur`-Namespace aliast auf die web-base-Tokens (`--text` →
-  `var(--color-fg)`, `--gold` → `var(--color-accent-400)`, …). Neue Farben
+  `var(--color-fg)`, `--gold` → `var(--color-accent-300)`, …). Neue Farben
   daher zuerst als Token in `theme.css` suchen, nicht als Hex in `game.css`
   anlegen. Literal bleiben nur die Identitätsfarben: das mitternachtsblaue Feld
   (`--bg`, `--bg2`, `--panel`) und `--teal`.
 - **Dark-only by design.** Kein `ThemeToggle`. `data-theme="dark"` steht fest in
   `index.html`, damit der Forced-Dark-Block aus `theme.css` greift; deshalb gibt
   es auch kein Anti-FOUC-Script — es wäre nichts wiederherzustellen.
-- **Akzent ist `--accent-h: 320`** (Neon-Magenta, Kino/Marquee). Der Wert wird
-  im Repo genau einmal benutzt; die sichtbare Identität ist das Gold, das über
-  `--gold` aus `--color-accent-400` kommt.
+- **Akzent ist `--accent-h: 80`** (Marquee-Gold, ≈ `#F5B841`). Der Wert wird
+  im Repo genau einmal benutzt; `game.css` holt die sichtbare Identität über
+  `--gold` → `var(--color-accent-300)` und `--gold-hi` → `accent-200`. (Eine
+  Zeit lang stand hier 320/Magenta — damit war das „Gold" in Wahrheit pink.)
 - **`movies.ts` und `movie-links.ts` sind generiert** (`bun run fetch-links`).
-  Nicht von Hand editieren; sie sind in `biome.json` vom Formatter ausgenommen,
+  Nicht von Hand editieren; sie sind in `.prettierignore` vom Formatter ausgenommen,
   weil der Generator unformatiert schreibt.
 - **YouTube nur als Embed.** Keine Server-Requests, kein API-Key im Client. Ein
   künftiger Such-Proxy läuft im Worker mit `YT_API_KEY` als Secret.
