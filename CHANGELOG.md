@@ -31,6 +31,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - Rekorde gelten jetzt je Modus **und** Rundenzahl (5 / 10 / Alle / Zeit);
   alte Rekorde werden als 5-Runden-Rekord übernommen.
 - Abhängigkeiten aktualisiert, u. a. Vitest 5 und `@vite-pwa/assets-generator` 2.
+- Auf web-base 0.5.0 angehoben: Lint + Format laufen über oxlint/oxfmt statt
+  Biome (`oxlint.base.json`, `.oxlintrc.json`, `.oxfmtrc.json`,
+  `.prettierignore`); `useLiveQuery` auf den aktuellen Template-Stand gebracht.
 
 ### Behoben
 - Das „Gold" war seit dem web-base-Abgleich Magenta (`--accent-h: 320`);

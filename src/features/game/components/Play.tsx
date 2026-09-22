@@ -101,7 +101,9 @@ export function Play({
     );
   };
 
+  // Runs from requestAnimationFrame, never during render.
   const tick = () => {
+    // oxlint-disable-next-line react/purity -- rAF callback, not render
     const e = performance.now() - startRef.current;
     setElapsed(e);
     if (e >= ROUND_MS) {
@@ -121,7 +123,6 @@ export function Play({
     if (!timeAttack) raf.current = requestAnimationFrame(tick);
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: run once per round (component is keyed by round)
   useEffect(() => {
     loadSeq.current = yt.load(movie.youtubeId, movie.startSeconds);
     if (muted) yt.mute();
@@ -134,24 +135,24 @@ export function Play({
       window.clearTimeout(graceTimer.current);
       onHold?.(false);
     };
+    // oxlint-disable-next-line react/exhaustive-deps, react/exhaustive-effect-dependencies -- run once per round (component is keyed by round)
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: react to player events for this round's load only
   useEffect(() => {
     if (yt.playingSeq === loadSeq.current) start();
+    // oxlint-disable-next-line react/exhaustive-deps, react/exhaustive-effect-dependencies -- react to player events for this round's load only
   }, [yt.playingSeq]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: react to player events for this round's load only
   useEffect(() => {
     if (yt.errorSeq !== loadSeq.current || phaseRef.current === "done") return;
     cancelAnimationFrame(raf.current);
     window.clearTimeout(graceTimer.current);
     onHold?.(true);
     setPhase("error");
+    // oxlint-disable-next-line react/exhaustive-deps, react/exhaustive-effect-dependencies -- react to player events for this round's load only
   }, [yt.errorSeq]);
 
   // Keyboard: 1–3 pick a suggestion, Esc gives up / skips.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: handler reads current state via phaseRef
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -165,6 +166,7 @@ export function Play({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // oxlint-disable-next-line react/exhaustive-deps, react/exhaustive-effect-dependencies -- handler reads current state via phaseRef
   }, [options]);
 
   const active = phase === "playing" || phase === "loading";
@@ -255,7 +257,6 @@ export function Play({
           <div className="eq">
             {Array.from({ length: 15 }).map((_, i) => (
               <span
-                // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative bars
                 key={i}
                 className={`eq-bar${muted || phase !== "playing" ? " mut" : ""}`}
                 style={{
@@ -314,7 +315,7 @@ export function Play({
                   value={guess}
                   aria-label="Filmtitel"
                   disabled={!active}
-                  // biome-ignore lint/a11y/noAutofocus: guessing input is the primary action each round
+                  // oxlint-disable-next-line jsx-a11y/no-autofocus -- guessing input is the primary action each round
                   autoFocus
                   onChange={(e) => setGuess(e.target.value)}
                   onKeyDown={(e) => {

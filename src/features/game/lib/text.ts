@@ -28,7 +28,7 @@ export function lev(a: string, b: string): number {
   if (m === 0) return n;
   if (n === 0) return m;
   let prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
-  let cur: number[] = new Array(n + 1).fill(0);
+  let cur: number[] = Array.from({ length: n + 1 }, () => 0);
   for (let i = 1; i <= m; i++) {
     cur[0] = i;
     for (let j = 1; j <= n; j++) {

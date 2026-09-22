@@ -44,11 +44,7 @@ export function Summary({
       {results.length > 0 && (
         <div className="card">
           {results.map((r, i) => (
-            <div
-              className="sumrow"
-              // biome-ignore lint/suspicious/noArrayIndexKey: results are append-only and stable within a game
-              key={i}
-            >
+            <div className="sumrow" key={i}>
               <span className="t">
                 <span
                   role="img"

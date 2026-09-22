@@ -127,7 +127,7 @@ export function useYouTube(): YT {
       const tag = document.createElement("script");
       tag.id = API_SCRIPT_ID;
       tag.src = "https://www.youtube.com/iframe_api";
-      tag.onerror = () => setFailed(true);
+      tag.addEventListener("error", () => setFailed(true));
       document.head.appendChild(tag);
     } else {
       build();
