@@ -7,7 +7,7 @@
   --bg:#0B0E17; --bg2:#141A29; --panel:#161B2A; --panel2:#1E2437;
   --line:var(--color-border); --line2:#3B4256;
   --text:var(--color-fg); --muted:var(--color-fg-muted); --dim:var(--color-fg-subtle);
-  --gold:var(--color-accent-400); --gold-hi:var(--color-accent-300); --gold-dim:#7A5E1C;
+  --gold:var(--color-accent-300); --gold-hi:var(--color-accent-200); --gold-dim:#7A5E1C;
   --teal:#45C8C2;
   --red:var(--color-danger); --green:var(--color-success);
   --disp:'Anton','Haettenschweiler','Impact','Franklin Gothic Bold',sans-serif;

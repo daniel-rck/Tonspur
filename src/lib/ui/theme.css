@@ -24,7 +24,7 @@
 
 @theme {
   /* ── App accent — change this per app ─────────────────── */
-  --accent-h: 320; /* Neon-Magenta — Kino/Marquee */
+  --accent-h: 80; /* Marquee gold (≈ #F5B841) — cinema */
 
   --color-accent-50: oklch(0.97 0.02 var(--accent-h));
   --color-accent-100: oklch(0.94 0.04 var(--accent-h));

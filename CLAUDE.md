@@ -52,9 +52,10 @@ bun run build       # SPA + PWA
 - **Dark-only by design.** Kein `ThemeToggle`. `data-theme="dark"` steht fest in
   `index.html`, damit der Forced-Dark-Block aus `theme.css` greift; deshalb gibt
   es auch kein Anti-FOUC-Script — es wäre nichts wiederherzustellen.
-- **Akzent ist `--accent-h: 320`** (Neon-Magenta, Kino/Marquee). Der Wert wird
-  im Repo genau einmal benutzt; die sichtbare Identität ist das Gold, das über
-  `--gold` aus `--color-accent-400` kommt.
+- **Akzent ist `--accent-h: 80`** (Marquee-Gold, ≈ `#F5B841`). Der Wert wird
+  im Repo genau einmal benutzt; `game.css` holt die sichtbare Identität über
+  `--gold` → `var(--color-accent-300)` und `--gold-hi` → `accent-200`. (Eine
+  Zeit lang stand hier 320/Magenta — damit war das „Gold" in Wahrheit pink.)
 - **`movies.ts` und `movie-links.ts` sind generiert** (`bun run fetch-links`).
   Nicht von Hand editieren; sie sind in `biome.json` vom Formatter ausgenommen,
   weil der Generator unformatiert schreibt.
