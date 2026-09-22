@@ -87,4 +87,16 @@ describe("extractId", () => {
   it("returns an empty string for text without an id", () => {
     expect(extractId("just some words")).toBe("");
   });
+
+  it("does not mistake an arbitrary 11-character word for an id", () => {
+    expect(extractId("Filmmusik: hello_world!")).toBe("");
+  });
+
+  it("ignores ?v= on non-YouTube hosts", () => {
+    expect(extractId(`https://example.com/watch?v=${RICK_ID}`)).toBe("");
+  });
+
+  it("finds the link inside pasted share text", () => {
+    expect(extractId(`Schau mal: https://youtu.be/${RICK_ID} 🎬`)).toBe(RICK_ID);
+  });
 });

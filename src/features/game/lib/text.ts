@@ -53,22 +53,31 @@ export function isMatch(guess: string, answers: string[]): boolean {
   });
 }
 
-/** Extract an 11-char YouTube video id from a raw id, a URL, or free text. */
+const ID_RE = /^[\w-]{11}$/;
+const YT_HOST_RE = /(^|\.)(youtube\.com|youtube-nocookie\.com|youtu\.be)$/;
+
+/**
+ * Extract an 11-char YouTube video id from a raw id, a YouTube URL, or text
+ * containing one (e.g. a pasted share message). Anything else yields "" —
+ * arbitrary 11-char words must not be mistaken for an id.
+ */
 export function extractId(input: string): string {
   const s = String(input ?? "").trim();
-  if (/^[\w-]{11}$/.test(s)) return s;
+  if (ID_RE.test(s)) return s;
   try {
     const u = new URL(s);
-    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1, 12);
-    const v = u.searchParams.get("v");
-    if (v) return v;
-    const m = u.pathname.match(/\/(embed|shorts)\/([\w-]{11})/);
-    if (m?.[2]) return m[2];
+    if (YT_HOST_RE.test(u.hostname)) {
+      const cand = u.hostname.endsWith("youtu.be")
+        ? u.pathname.slice(1, 12)
+        : (u.searchParams.get("v") ?? u.pathname.match(/\/(embed|shorts|live)\/([\w-]{11})/)?.[2]);
+      if (cand && ID_RE.test(cand)) return cand;
+    }
+    return "";
   } catch {
     /* not a url */
   }
-  const m = s.match(/[\w-]{11}/);
-  return m?.[0] ?? "";
+  const m = s.match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/|\/(?:embed|shorts|live)\/)([\w-]{11})/);
+  return m?.[1] ?? "";
 }
 
 /** Build a YouTube search-results URL for a query. */

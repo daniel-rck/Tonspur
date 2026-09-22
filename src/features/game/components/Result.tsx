@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { RoundResult } from "../types.ts";
 
 interface ResultProps {
@@ -9,12 +10,19 @@ interface ResultProps {
 }
 
 export function Result({ last, score, streak, isLast, onNext }: ResultProps) {
+  const next = useRef<HTMLButtonElement>(null);
+  // Focus "next" so Enter/Space continue straight away.
+  useEffect(() => next.current?.focus(), []);
   if (!last) return null;
   const meta = [last.theme, last.composer, last.year].filter(Boolean).join(" · ");
   return (
     <div className="fade">
       <div className="card reveal">
-        <div className="verdict" style={{ color: last.correct ? "var(--green)" : "var(--red)" }}>
+        <div
+          className="verdict"
+          role="status"
+          style={{ color: last.correct ? "var(--green)" : "var(--red)" }}
+        >
           {last.correct ? "Richtig!" : "Daneben"}
         </div>
         <div className="film">{last.title}</div>
@@ -40,7 +48,7 @@ export function Result({ last, score, streak, isLast, onNext }: ResultProps) {
           <span className="chip">Gesamt {score.toLocaleString("de-DE")}</span>
         </div>
       </div>
-      <button type="button" className="btn btn-gold mt" onClick={onNext}>
+      <button ref={next} type="button" className="btn btn-gold mt" onClick={onNext}>
         {isLast ? "Ergebnis ansehen →" : "Nächste Runde →"}
       </button>
     </div>

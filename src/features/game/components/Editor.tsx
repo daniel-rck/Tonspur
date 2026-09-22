@@ -11,10 +11,15 @@ interface EditorProps {
 
 export function Editor({ pack, setPack, onBack }: EditorProps) {
   const [newTitle, setNewTitle] = useState("");
+  const [filter, setFilter] = useState("");
 
   const update = (id: string, patch: Partial<PackEntry>) =>
     setPack((p) => p.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-  const remove = (id: string) => setPack((p) => p.filter((m) => m.id !== id));
+  const remove = (m: PackEntry) => {
+    // Only ask when something the person entered would be lost.
+    if (m.youtubeId && !window.confirm(`„${m.title}" samt Video-Link löschen?`)) return;
+    setPack((p) => p.filter((x) => x.id !== m.id));
+  };
   const add = () => {
     const t = newTitle.trim();
     if (!t) return;
@@ -45,6 +50,8 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
   };
 
   const ready = pack.filter((m) => m.youtubeId).length;
+  const q = normTitle(filter);
+  const shown = q ? pack.filter((m) => normTitle(m.title).includes(q)) : pack;
 
   return (
     <div className="fade">
@@ -63,6 +70,7 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
           <input
             className="fld"
             placeholder="Filmtitel …"
+            aria-label="Neuer Filmtitel"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => {
@@ -74,6 +82,7 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
             className="btn btn-gold btn-sm"
             style={{ minWidth: 60 }}
             onClick={add}
+            aria-label="Film hinzufügen"
           >
             ＋
           </button>
@@ -87,12 +96,26 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
       </div>
 
       <div className="card" style={{ padding: 14 }}>
-        {pack.map((m) => (
+        <input
+          className="fld mb"
+          type="search"
+          placeholder={`In ${pack.length} Filmen suchen …`}
+          aria-label="Filme filtern"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+        {shown.length === 0 && (
+          <div className="dim center" style={{ fontSize: 14, padding: "8px 0" }}>
+            Kein Film passt zu „{filter}".
+          </div>
+        )}
+        {shown.map((m) => (
           <div className="mrow" key={m.id}>
             <div className="top">
               <input
                 className="mini"
                 style={{ fontWeight: 600 }}
+                aria-label="Filmtitel"
                 value={m.title}
                 onChange={(e) =>
                   update(m.id, {
@@ -107,8 +130,9 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
               <button
                 type="button"
                 className="iconbtn del"
-                onClick={() => remove(m.id)}
+                onClick={() => remove(m)}
                 title="Löschen"
+                aria-label={`${m.title} löschen`}
               >
                 🗑
               </button>
@@ -117,6 +141,7 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
               <input
                 className="mini"
                 placeholder="Link zur Titelmelodie (Main Theme) …"
+                aria-label={`YouTube-Link für ${m.title}`}
                 defaultValue={m.youtubeId ? `https://youtu.be/${m.youtubeId}` : ""}
                 onChange={(e) => update(m.id, { youtubeId: extractId(e.target.value) })}
               />
@@ -127,6 +152,7 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Auf YouTube suchen"
+                aria-label={`${m.title} auf YouTube suchen`}
               >
                 🔎
               </a>
@@ -140,6 +166,7 @@ export function Editor({ pack, setPack, onBack }: EditorProps) {
                   update(m.id, { startSeconds: Math.max(0, Number(e.target.value) || 0) })
                 }
                 title="Start-Sekunde"
+                aria-label="Start-Sekunde"
               />
             </div>
           </div>

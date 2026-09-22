@@ -21,8 +21,17 @@ interface PlayProps {
   hits: number;
   onDone: (gained: number, elapsed: number, correct: boolean) => void;
   onHit?: () => void;
+  /** Hold (true) or release (false) the time-attack clock while the video loads. */
+  onHold?: (hold: boolean) => void;
+  /** The video can't be played; replace this round's film. */
+  onUnplayable: () => void;
   onQuit: () => void;
 }
+
+type Phase = "loading" | "playing" | "done" | "error";
+
+/** Start the round clock anyway if the player never reports PLAYING. */
+const LOAD_GRACE_MS = 4000;
 
 export function Play({
   movie,
@@ -40,10 +49,18 @@ export function Play({
   hits,
   onDone,
   onHit,
+  onHold,
+  onUnplayable,
   onQuit,
 }: PlayProps) {
   const [elapsed, setElapsed] = useState(0);
-  const [phase, setPhase] = useState<"playing" | "done">("playing");
+  const [phase, setPhaseState] = useState<Phase>("loading");
+  // Callbacks fired from timers/rAF read the phase from here, not a stale closure.
+  const phaseRef = useRef<Phase>("loading");
+  const setPhase = (p: Phase) => {
+    phaseRef.current = p;
+    setPhaseState(p);
+  };
   const [guess, setGuess] = useState("");
   const [errShake, setErrShake] = useState(false);
   const [picked, setPicked] = useState<PackEntry | null>(null);
@@ -51,6 +68,8 @@ export function Play({
   const startRef = useRef(0);
   const raf = useRef(0);
   const doneTimer = useRef(0);
+  const graceTimer = useRef(0);
+  const loadSeq = useRef(0);
 
   const options = useMemo<PackEntry[]>(() => {
     if (mode !== "choice") return [];
@@ -63,8 +82,12 @@ export function Play({
   }, [movie, pack, mode]);
 
   const endRound = (correct: boolean, pick: PackEntry | null) => {
-    if (phase === "done") return;
+    if (phaseRef.current !== "playing" && phaseRef.current !== "loading") return;
+    // Giving up before the audio started: count elapsed time from now.
+    if (phaseRef.current === "loading") startRef.current = performance.now();
     cancelAnimationFrame(raf.current);
+    window.clearTimeout(graceTimer.current);
+    onHold?.(false);
     setPhase("done");
     setPicked(pick);
     yt.pause();
@@ -78,36 +101,78 @@ export function Play({
     );
   };
 
+  const tick = () => {
+    const e = performance.now() - startRef.current;
+    setElapsed(e);
+    if (e >= ROUND_MS) {
+      endRound(false, null);
+      return;
+    }
+    raf.current = requestAnimationFrame(tick);
+  };
+
+  /** Audio is running (or the grace period ran out): start the round clock. */
+  const start = () => {
+    if (phaseRef.current !== "loading") return;
+    window.clearTimeout(graceTimer.current);
+    setPhase("playing");
+    startRef.current = performance.now();
+    onHold?.(false);
+    if (!timeAttack) raf.current = requestAnimationFrame(tick);
+  };
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: run once per round (component is keyed by round)
   useEffect(() => {
-    yt.load(movie.youtubeId, movie.startSeconds);
+    loadSeq.current = yt.load(movie.youtubeId, movie.startSeconds);
     if (muted) yt.mute();
     else yt.unmute();
-    startRef.current = performance.now();
-    if (timeAttack) {
-      return () => {
-        cancelAnimationFrame(raf.current);
-        window.clearTimeout(doneTimer.current);
-      };
-    }
-    const tick = () => {
-      const e = performance.now() - startRef.current;
-      setElapsed(e);
-      if (e >= ROUND_MS) {
-        endRound(false, null);
-        return;
-      }
-      raf.current = requestAnimationFrame(tick);
-    };
-    raf.current = requestAnimationFrame(tick);
+    onHold?.(true);
+    graceTimer.current = window.setTimeout(start, LOAD_GRACE_MS);
     return () => {
       cancelAnimationFrame(raf.current);
       window.clearTimeout(doneTimer.current);
+      window.clearTimeout(graceTimer.current);
+      onHold?.(false);
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: react to player events for this round's load only
+  useEffect(() => {
+    if (yt.playingSeq === loadSeq.current) start();
+  }, [yt.playingSeq]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: react to player events for this round's load only
+  useEffect(() => {
+    if (yt.errorSeq !== loadSeq.current || phaseRef.current === "done") return;
+    cancelAnimationFrame(raf.current);
+    window.clearTimeout(graceTimer.current);
+    onHold?.(true);
+    setPhase("error");
+  }, [yt.errorSeq]);
+
+  // Keyboard: 1–3 pick a suggestion, Esc gives up / skips.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handler reads current state via phaseRef
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === "Escape") {
+        endRound(false, null);
+        return;
+      }
+      if (mode !== "choice" || phaseRef.current !== "playing") return;
+      const o = options[Number(e.key) - 1];
+      if (o) endRound(o.id === movie.id, o);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [options]);
+
+  const active = phase === "playing" || phase === "loading";
+  // Answers only count once the music is actually audible.
+  const canAnswer = phase === "playing";
+
   const submitFree = () => {
-    if (phase === "done") return;
+    if (phaseRef.current !== "playing") return;
     if (isMatch(guess, movie.answers)) {
       endRound(true, null);
     } else {
@@ -116,7 +181,7 @@ export function Play({
     }
   };
 
-  const pts = pointsNow(elapsed);
+  const pts = phase === "loading" ? MAX_PTS : pointsNow(elapsed);
   const frac = timeAttack ? Math.min(1, remainingMs / TIME_START_MS) : pts / MAX_PTS;
   const R = 100;
   const C = 2 * Math.PI * R;
@@ -137,7 +202,14 @@ export function Play({
         <div className="row" style={{ gap: 14 }}>
           {streak >= 2 && <span className="chip">🔥 {streak}</span>}
           {!timeAttack && <span className="score-pill">{score.toLocaleString("de-DE")}</span>}
-          <button type="button" className="iconbtn" onClick={() => setMuted((m) => !m)} title="Ton">
+          <button
+            type="button"
+            className="iconbtn"
+            onClick={() => setMuted((m) => !m)}
+            title={muted ? "Ton an" : "Ton aus"}
+            aria-label="Ton stumm"
+            aria-pressed={muted}
+          >
             {muted ? "🔇" : "🔊"}
           </button>
         </div>
@@ -151,7 +223,7 @@ export function Play({
               height="230"
               viewBox="0 0 230 230"
               role="img"
-              aria-label="Verbleibende Punkte"
+              aria-label={timeAttack ? "Verbleibende Zeit" : "Verbleibende Punkte"}
             >
               <circle cx="115" cy="115" r={R} fill="none" stroke="var(--line)" strokeWidth="10" />
               <circle
@@ -164,15 +236,14 @@ export function Play({
                 strokeLinecap="round"
                 strokeDasharray={C}
                 strokeDashoffset={C * (1 - frac)}
-                style={{
-                  transition: "stroke-dashoffset .1s linear",
-                  filter: "drop-shadow(0 0 6px rgba(245,184,65,.5))",
-                }}
+                className="ring-arc"
               />
             </svg>
             <div className="ring-center">
-              <div className="pts">{timeAttack ? hits : phase === "done" ? "—" : pts}</div>
-              <div className="pts-lbl">{timeAttack ? "Treffer" : "Punkte jetzt"}</div>
+              <div className="pts">{timeAttack ? hits : active ? pts : "—"}</div>
+              <div className="pts-lbl">
+                {phase === "loading" ? "Lädt …" : timeAttack ? "Treffer" : "Punkte jetzt"}
+              </div>
               <div className="clock">
                 {timeAttack
                   ? `${Math.max(0, remainingMs / 1000).toFixed(1)}s`
@@ -186,7 +257,7 @@ export function Play({
               <span
                 // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative bars
                 key={i}
-                className={`eq-bar${muted || phase === "done" ? " mut" : ""}`}
+                className={`eq-bar${muted || phase !== "playing" ? " mut" : ""}`}
                 style={{
                   animationDuration: `${0.6 + (i % 5) * 0.13}s`,
                   animationDelay: `${(i % 7) * 0.09}s`,
@@ -196,6 +267,16 @@ export function Play({
           </div>
           <div className="redacted" />
         </div>
+
+        {phase === "error" && (
+          <div className="notice warn mt" role="alert">
+            <b>Dieses Video lässt sich nicht abspielen</b> (entfernt, gesperrt oder nicht
+            einbettbar). Die Runde zählt nicht.
+            <button type="button" className="btn btn-gold btn-sm mt-s" onClick={onUnplayable}>
+              Anderer Film →
+            </button>
+          </div>
+        )}
 
         <div style={{ marginTop: 22 }}>
           {mode === "choice" ? (
@@ -213,9 +294,12 @@ export function Play({
                     key={o.id}
                     className="choice"
                     data-state={state}
-                    disabled={phase === "done"}
+                    disabled={!canAnswer}
                     onClick={() => endRound(o.id === movie.id, o)}
                   >
+                    <span className="key" aria-hidden="true">
+                      {options.indexOf(o) + 1}
+                    </span>
                     {o.title}
                   </button>
                 );
@@ -228,7 +312,8 @@ export function Play({
                   className={`fld ${errShake ? "err" : ""}`}
                   placeholder="Filmtitel eingeben …"
                   value={guess}
-                  disabled={phase === "done"}
+                  aria-label="Filmtitel"
+                  disabled={!active}
                   // biome-ignore lint/a11y/noAutofocus: guessing input is the primary action each round
                   autoFocus
                   onChange={(e) => setGuess(e.target.value)}
@@ -240,14 +325,16 @@ export function Play({
                   type="button"
                   className="btn btn-gold btn-sm"
                   style={{ minWidth: 96 }}
-                  disabled={phase === "done"}
+                  disabled={!canAnswer}
                   onClick={submitFree}
                 >
                   Raten
                 </button>
               </div>
-              <div className="mask">{phase === "done" ? movie.title : mask}</div>
-              {phase === "playing" && (
+              <div className="mask" aria-live="polite">
+                {phase === "done" ? movie.title : mask}
+              </div>
+              {active && (
                 <div className="row between mt-s">
                   <button
                     type="button"
@@ -266,7 +353,7 @@ export function Play({
         </div>
       </div>
 
-      {phase === "playing" && (
+      {active && (
         <button type="button" className="btn btn-ghost mt-s" onClick={() => endRound(false, null)}>
           {timeAttack ? "Überspringen →" : "Aufgeben →"}
         </button>

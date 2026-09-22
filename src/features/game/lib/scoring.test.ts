@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PTS, pointsNow, ROUND_MS, timeBonus } from "./scoring.ts";
+import {
+  hsKeyFor,
+  MAX_PTS,
+  migrateHighscores,
+  pointsNow,
+  ROUND_MS,
+  TIME_ATTACK,
+  timeBonus,
+} from "./scoring.ts";
 
 describe("pointsNow", () => {
   it("awards the maximum at the start of the round", () => {
@@ -33,5 +41,27 @@ describe("timeBonus", () => {
     expect(timeBonus(8)).toBe(3);
     expect(timeBonus(9)).toBe(3);
     expect(timeBonus(50)).toBe(3);
+  });
+});
+
+describe("hsKeyFor", () => {
+  it("keeps one record per mode and round format", () => {
+    expect(hsKeyFor("choice", 5)).toBe("choice-5");
+    expect(hsKeyFor("free", 10)).toBe("free-10");
+    expect(hsKeyFor("choice", 0)).toBe("choice-all");
+    expect(hsKeyFor("free", TIME_ATTACK)).toBe("free-time");
+  });
+});
+
+describe("migrateHighscores", () => {
+  it("moves legacy per-mode records to the 5-round key", () => {
+    expect(migrateHighscores({ choice: 3200, "free-time": 4 })).toEqual({
+      "choice-5": 3200,
+      "free-time": 4,
+    });
+  });
+
+  it("never overwrites an existing 5-round record", () => {
+    expect(migrateHighscores({ free: 900, "free-5": 1200 })).toEqual({ "free-5": 1200 });
   });
 });

@@ -13,6 +13,7 @@ interface HomeProps {
   onEdit: () => void;
   highscore: number;
   ytFailed: boolean;
+  ytReady: boolean;
 }
 
 export function Home({
@@ -26,9 +27,18 @@ export function Home({
   onEdit,
   highscore,
   ytFailed,
+  ytReady,
 }: HomeProps) {
   const enoughForChoice = total >= 3;
-  const canStart = playableCount >= 1 && (mode === "free" || enoughForChoice);
+  const hasFilms = playableCount >= 1 && (mode === "free" || enoughForChoice);
+  const canStart = hasFilms && ytReady;
+  const startLabel = !hasFilms
+    ? "Erst Videos einfügen"
+    : ytFailed
+      ? "YouTube nicht erreichbar"
+      : !ytReady
+        ? "Player lädt …"
+        : "▶  Spiel starten";
   return (
     <div className="fade">
       <div className="card">
@@ -37,11 +47,17 @@ export function Home({
           <button
             type="button"
             data-on={mode === "choice" ? 1 : 0}
+            aria-pressed={mode === "choice"}
             onClick={() => setMode("choice")}
           >
             3 Vorschläge
           </button>
-          <button type="button" data-on={mode === "free" ? 1 : 0} onClick={() => setMode("free")}>
+          <button
+            type="button"
+            data-on={mode === "free" ? 1 : 0}
+            aria-pressed={mode === "free"}
+            onClick={() => setMode("free")}
+          >
             Frei raten
           </button>
         </div>
@@ -55,6 +71,7 @@ export function Home({
               type="button"
               key={n}
               data-on={roundCount === n ? 1 : 0}
+              aria-pressed={roundCount === n}
               onClick={() => setRoundCount(n)}
             >
               {n === 0 ? "Alle" : n === TIME_ATTACK ? "⏱ Zeit" : n}
@@ -73,7 +90,12 @@ export function Home({
             <b style={{ color: playableCount ? "var(--green)" : "var(--gold)" }}>{playableCount}</b>
             <span className="dim"> / {total} Filme mit Video</span>
           </span>
-          {highscore > 0 && <span className="chip">🏆 {highscore.toLocaleString("de-DE")}</span>}
+          {highscore > 0 && (
+            <span className="chip" title="Rekord für diesen Modus und diese Rundenzahl">
+              🏆 {highscore.toLocaleString("de-DE")}
+              {isTimeAttack(roundCount) ? " Treffer" : ""}
+            </span>
+          )}
         </div>
 
         <button
@@ -83,7 +105,7 @@ export function Home({
           onClick={onStart}
           style={{ marginTop: 16 }}
         >
-          {canStart ? "▶  Spiel starten" : "Erst Videos einfügen"}
+          {startLabel}
         </button>
         <button type="button" className="btn btn-ghost mt-s" onClick={onEdit}>
           🎬 Filme verwalten
